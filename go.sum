@@ -1,0 +1,6 @@
+github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
+github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/awalterschulze/gographviz v2.0.3+incompatible h1:9sVEXJBJLwGX7EQVhLm2elIKCm7P2YHFC8v6096G09E=
+github.com/awalterschulze/gographviz v2.0.3+incompatible/go.mod h1:GEV5wmg4YquNw7v1kkyoX9etIk8yVmXj+AkDHuuETHs=
+github.com/thcyron/graphs v0.0.0-20150819191807-c4415928a6c5 h1:LpSPiGcXVpSdrGuPahwDe6RVumyr8tQkCVV7SGKaqFk=
+github.com/thcyron/graphs v0.0.0-20150819191807-c4415928a6c5/go.mod h1:5rRMky/ynlapN3KbBZ19FOzbA9YKNC1PTkcXKPeD4aw=

@@ -1,0 +1,9 @@
+config_version = 2
+# Application discovery settings
+[Discover]
+
+  # List of directories containing applications, example: ['go/code', 'shop/']
+  application_dirs = ["a-service"]
+
+  # Descend at most SearchDepth levels to find application configs
+  search_depth = 1
