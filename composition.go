@@ -10,23 +10,13 @@ import (
 	"github.com/thcyron/graphs"
 )
 
-// DepService ...
-type DepService struct {
-	Condition string `json:"condition"`
-}
-
-// NewDepService creates new DepService
-func NewDepService() DepService {
-	return DepService{}
-}
-
 // Service ...
 type Service struct {
-	DependsOn map[string]DepService `json:"depends_on"`
+	DependsOn map[string]struct{} `json:"depends_on"`
 }
 
 // AddDependency adds a service
-func (s *Service) AddDependency(name string, service DepService) {
+func (s *Service) AddDependency(name string, service struct{}) {
 	if _, ok := s.DependsOn[name]; !ok {
 		s.DependsOn[name] = service
 	}
@@ -34,7 +24,7 @@ func (s *Service) AddDependency(name string, service DepService) {
 
 // NewService creates a new Service
 func NewService() Service {
-	deps := make(map[string]DepService)
+	deps := make(map[string]struct{})
 	return Service{DependsOn: deps}
 }
 

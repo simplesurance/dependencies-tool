@@ -12,8 +12,8 @@ func makeTestComp() (comp *Composition) {
 	bService := NewService()
 	cService := NewService()
 
-	aService.AddDependency("c", NewDepService())
-	bService.AddDependency("a", NewDepService())
+	aService.AddDependency("c", struct{}{})
+	bService.AddDependency("a", struct{}{})
 
 	comp = NewComposition()
 	comp.AddService("b", bService)
@@ -26,7 +26,7 @@ func makeTestComp() (comp *Composition) {
 func TestVerifyDependencies(t *testing.T) {
 	comp := makeTestComp()
 	dService := NewService()
-	dService.AddDependency("notDefined", NewDepService())
+	dService.AddDependency("notDefined", struct{}{})
 	comp.AddService("d", dService)
 
 	if err := comp.VerifyDependencies(""); err == nil {
@@ -57,7 +57,7 @@ func TestOutputDotGraph(t *testing.T) {
 
 func TestPrepareForOwnDb(t *testing.T) {
 	a := NewService()
-	a.AddDependency("postgres", NewDepService())
+	a.AddDependency("postgres", struct{}{})
 	comp := NewComposition()
 	comp.AddService("a", a)
 	comp.PrepareForOwnDb()
@@ -69,7 +69,7 @@ func TestPrepareForOwnDb(t *testing.T) {
 
 func TestAddDependency(t *testing.T) {
 	service := NewService()
-	dep := NewDepService()
+	dep := struct{}{}
 
 	service.AddDependency("dep1", dep)
 

@@ -144,7 +144,7 @@ func compositionFromSisuDir(directory string) (comp Composition, err error) {
 		service := NewService()
 		if len(t.TalksTo) > 0 {
 			for _, depservice := range t.TalksTo {
-				service.AddDependency(depservice, NewDepService())
+				service.AddDependency(depservice, struct{}{})
 			}
 		}
 		comp.AddService(t.Name, service)
@@ -195,7 +195,7 @@ func compositionFromAppdirFile(file string) (comp Composition, err error) {
 		service := NewService()
 		if len(t.TalksTo) > 0 {
 			for _, depservice := range t.TalksTo {
-				service.AddDependency(depservice, NewDepService())
+				service.AddDependency(depservice, struct{}{})
 			}
 		}
 		comp.AddService(t.Name, service)
