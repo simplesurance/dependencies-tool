@@ -1,3 +1,4 @@
+//go:build !integrationtest || unittest
 // +build !integrationtest unittest
 
 package main

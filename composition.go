@@ -163,7 +163,7 @@ func (comp Composition) Deps(s string) (services []string) {
 	return services
 }
 
-//error if removed service is a dependencies of another service which should not be removed
+// error if removed service is a dependencies of another service which should not be removed
 func removeNotWanted(comp Composition, s string) (todo map[string]bool, err error) {
 	todo = make(map[string]bool)
 	var notwanted []string

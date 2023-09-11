@@ -1,3 +1,4 @@
+//go:build !integrationtest || unittest
 // +build !integrationtest unittest
 
 package main
@@ -38,7 +39,7 @@ func TestVerifyDependencies(t *testing.T) {
 	}
 }
 
-////
+// //
 func TestOutputDotGraph(t *testing.T) {
 	comp := makeTestComp()
 	dot, _ := outputDotGraph(*comp)
