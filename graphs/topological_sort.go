@@ -7,32 +7,39 @@ import (
 
 var ErrNoDAG = errors.New("graphs: graph is not a DAG")
 
-func TopologicalSort(g *Graph) (topologicalOrder *list.List, topologicalClasses map[Vertex]int, err error) {
-	inEdges := make(map[Vertex]int)
+func TopologicalSort(g *Graph) (topologicalOrder *list.List, topologicalClasses map[string]int, err error) {
+	inEdges := make(map[string]int)
 	for e := range g.EdgesIter() {
 		if _, ok := inEdges[e.Start]; !ok {
 			inEdges[e.Start] = 0
 		}
-		if _, ok := inEdges[e.End]; ok {
-			inEdges[e.End]++
-		} else {
-			inEdges[e.End] = 1
-		}
+
+		inEdges[e.End]++
 	}
 
-	removeEdgesFromVertex := func(v Vertex) {
+	removeEdgesFromVertex := func(v string) {
 		for outEdge := range g.HalfedgesIter(v) {
 			neighbor := outEdge.End
 			inEdges[neighbor]--
 		}
 	}
 
-	topologicalClasses = make(map[Vertex]int)
+	sortedInEdges := sortedEdges(inEdges)
+
+	topologicalClasses = make(map[string]int)
 	topologicalOrder = list.New()
 	tClass := 0
 	for len(inEdges) > 0 {
-		topClass := []Vertex{}
-		for v, inDegree := range inEdges {
+		topClass := []string{}
+		for _, v := range sortedInEdges {
+			if _, exist := inEdges[v]; !exist {
+				// skip elements that were already processed and
+				// deleted from the map, this is expensive but
+				// sufficient for our humble usecase
+				continue
+			}
+
+			inDegree := inEdges[v]
 			if inDegree == 0 {
 				topClass = append(topClass, v)
 				topologicalClasses[v] = tClass
@@ -40,7 +47,7 @@ func TopologicalSort(g *Graph) (topologicalOrder *list.List, topologicalClasses 
 		}
 		if len(topClass) == 0 {
 			err = ErrNoDAG
-			topologicalClasses = make(map[Vertex]int)
+			topologicalClasses = make(map[string]int)
 			topologicalOrder = list.New()
 			return
 		}
