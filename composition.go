@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
+	"slices"
 	"strings"
 
 	"github.com/awalterschulze/gographviz"
-	"github.com/thcyron/graphs"
+	"github.com/simplesurance/dependencies-tool/graphs"
 )
 
 // DepService ...
@@ -138,6 +139,7 @@ func (comp Composition) DeploymentOrder() (order []string, err error) {
 		e = e.Next()
 	}
 
+	slices.Sort(nodeps)
 	// graphs.TopologicalSort() deletes services which are no dependencies
 	// and have no dependencies so we add them again
 	for _, n := range nodeps {
@@ -294,7 +296,7 @@ func outputDotGraph(comp Composition) (s string, err error) {
 }
 
 func compositionFromDockerComposeOutput(file string) (comp Composition, err error) {
-	byteValue, err := ioutil.ReadFile(file)
+	byteValue, err := os.ReadFile(file)
 	if err != nil {
 		return comp, fmt.Errorf("could not read file %v", err)
 	}
