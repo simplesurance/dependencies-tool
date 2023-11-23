@@ -29,7 +29,7 @@ func (d BaurConf) FindDepTomls(dir string) (tomls []string, err error) {
 	for _, searchDir := range d.Discover.AppDirs {
 		depsCfgs, err := findFilesInSubDir(dir+"/"+searchDir, ".deps*.toml", d.Discover.SearchDepth)
 		if err != nil {
-			return nil, fmt.Errorf("finding dependencies configs failed %v", err)
+			return nil, fmt.Errorf("finding dependencies configs failed %w", err)
 		}
 
 		tomls = append(tomls, depsCfgs...)
@@ -41,7 +41,7 @@ func (d BaurConf) FindDepTomls(dir string) (tomls []string, err error) {
 func loadBaurToml(dir string) (d BaurConf, err error) {
 
 	if _, err := toml.DecodeFile(dir, &d); err != nil {
-		return d, fmt.Errorf("could not load '%s %v", dir, err)
+		return d, fmt.Errorf("could not load '%s %w", dir, err)
 	}
 	return d, nil
 }
@@ -133,13 +133,13 @@ func compositionFromSisuDir(directory string) (comp Composition, err error) {
 
 	tomls, err := applicationTomls(directory)
 	if err != nil {
-		return comp, fmt.Errorf("could not get app tomls, %v", err)
+		return comp, fmt.Errorf("could not get app tomls, %w", err)
 	}
 
 	for _, tomlfile := range tomls {
 		var t tomlService
 		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
-			return comp, fmt.Errorf("could not toml decode %v, %v", tomlfile, err)
+			return comp, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
 		}
 		service := NewService()
 		if len(t.TalksTo) > 0 {
@@ -184,13 +184,13 @@ func compositionFromAppdirFile(file string) (comp Composition, err error) {
 
 	tomls, err := appTomlsFromAppDirFile(file)
 	if err != nil {
-		return comp, fmt.Errorf("could not get app tomls, %v", err)
+		return comp, fmt.Errorf("could not get app tomls, %w", err)
 	}
 
 	for _, tomlfile := range tomls {
 		var t tomlService
 		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
-			return comp, fmt.Errorf("could not toml decode %v, %v", tomlfile, err)
+			return comp, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
 		}
 		service := NewService()
 		if len(t.TalksTo) > 0 {
