@@ -1,0 +1,30 @@
+---
+linters:
+  disable-all: false
+  enable:
+    - bodyclose
+    - errcheck
+    - errorlint
+    - exportloopref
+    - goimports
+    - goprintffuncname
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nolintlint
+    - prealloc
+    - revive
+    - staticcheck
+    - tenv
+    - typecheck
+    - unconvert
+    - unused
+    - usestdlibvars
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/simplesurance/dependencies-tool
+
+issues:
+  exclude-use-default: true
