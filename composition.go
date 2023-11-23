@@ -265,17 +265,17 @@ func outputDotGraph(comp Composition) (s string, err error) {
 	graph.Directed = true
 
 	if err := graph.AddAttr("G", "splines", "\"ortho\""); err != nil {
-		return s, fmt.Errorf("could not add Attribute splines: %v", err)
+		return s, fmt.Errorf("could not add Attribute splines: %w", err)
 	}
 	if err := graph.AddAttr("G", "ranksep", "\"2.0\""); err != nil {
-		return s, fmt.Errorf("could not add Attribute ranksep: %v", err)
+		return s, fmt.Errorf("could not add Attribute ranksep: %w", err)
 	}
 
 	for service, dependencies := range comp.Services {
 		s := sanitize(service)
 
 		if err := graph.AddNode("G", s, nil); err != nil {
-			return s, fmt.Errorf("could not add service %v to graph: %v", service, err)
+			return s, fmt.Errorf("could not add service %v to graph: %w", service, err)
 		}
 
 		for depservice := range dependencies.DependsOn {
@@ -283,12 +283,12 @@ func outputDotGraph(comp Composition) (s string, err error) {
 
 			if !graph.IsNode(d) {
 				if err := graph.AddNode("G", d, nil); err != nil {
-					return s, fmt.Errorf("could not add service %v to graph: %v", service, err)
+					return s, fmt.Errorf("could not add service %v to graph: %w", service, err)
 				}
 			}
 
 			if err := graph.AddEdge(s, d, true, nil); err != nil {
-				return s, fmt.Errorf("could not add edge from %v to %v: %v", service, depservice, err)
+				return s, fmt.Errorf("could not add edge from %v to %v: %w", service, depservice, err)
 			}
 		}
 	}
@@ -299,11 +299,11 @@ func outputDotGraph(comp Composition) (s string, err error) {
 func compositionFromDockerComposeOutput(file string) (comp Composition, err error) {
 	byteValue, err := os.ReadFile(file)
 	if err != nil {
-		return comp, fmt.Errorf("could not read file %v", err)
+		return comp, fmt.Errorf("could not read file %w", err)
 	}
 
 	if err = json.Unmarshal(byteValue, &comp); err != nil {
-		return comp, fmt.Errorf("could not unmarshal %v", err)
+		return comp, fmt.Errorf("could not unmarshal %w", err)
 	}
 	return comp, nil
 }
