@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/awalterschulze/gographviz"
+
 	"github.com/simplesurance/dependencies-tool/graphs"
 )
 
@@ -250,7 +251,7 @@ func sortableGraph(comp Composition) (graph *graphs.Graph, err error) {
 
 		for depservice := range dependencies.DependsOn {
 			d := sanitize(depservice)
-			graph.AddEdge(s, d, 0)
+			graph.AddEdge(s, d)
 		}
 	}
 

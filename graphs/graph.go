@@ -48,7 +48,7 @@ func (g *Graph) AddVertex(v string) {
 
 // AddEdge adds an edge to the graph. The edge connects
 // vertex v1 and vertex v2.
-func (g *Graph) AddEdge(v1, v2 string, c float64) {
+func (g *Graph) AddEdge(v1, v2 string) {
 	g.AddVertex(v1)
 	g.AddVertex(v2)
 
