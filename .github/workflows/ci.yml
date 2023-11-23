@@ -37,7 +37,7 @@ jobs:
           go-version: ${{ matrix.go }}
           cache: true
       - name: test
-        run: go -race test ./...
+        run: go test -race ./...
 
   golangci:
     strategy:
