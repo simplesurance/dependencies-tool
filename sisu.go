@@ -81,7 +81,7 @@ func realDepsToml(dir, region string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("could not find one of the folowing dependency files in %s: %s",
+	return "", fmt.Errorf("could not find one of the following dependency files in %s: %s",
 		dir, strings.Join(filelist, ", "))
 }
 
