@@ -46,7 +46,7 @@ func loadBaurToml(dir string) (d BaurConf, err error) {
 	return d, nil
 }
 
-func depsFileSearchList(env, region string) []string {
+func depsFileSearchList(region string) []string {
 	var fileSearchList []string
 
 	if region != "" && environment != "" {
@@ -68,8 +68,8 @@ func depsFileSearchList(env, region string) []string {
 
 // realDepsToml returns found override deps.toml based on
 // given environment and / or region
-func realDepsToml(dir, env, region string) (string, error) {
-	filelist := depsFileSearchList(env, region)
+func realDepsToml(dir, region string) (string, error) {
+	filelist := depsFileSearchList(region)
 
 	for _, f := range filelist {
 		file := filepath.Join(dir, f)
@@ -102,7 +102,7 @@ func findFilesInSubDir(searchDir, filename string, maxdepth int) ([]string, erro
 
 		for _, m := range matches {
 			dir := filepath.Dir(m)
-			depsToml, err := realDepsToml(dir, environment, region)
+			depsToml, err := realDepsToml(dir, region)
 			if err != nil {
 				return nil, err
 			}
