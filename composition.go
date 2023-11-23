@@ -78,12 +78,9 @@ func (comp *Composition) PrepareForOwnDb() {
 // it takes a comma separated list of service names.
 // These dependencies should be ignored which can be handy when you have external managed ones.
 func (comp *Composition) VerifyDependencies(verifyIgnore string) (err error) {
-	var services, ignored []string
+	ignored := trimSpaces(strings.Split(verifyIgnore, ","))
 
-	for _, n := range strings.Split(verifyIgnore, ",") {
-		ignored = append(ignored, strings.TrimSpace(n))
-	}
-
+	services := make([]string, 0, len(comp.Services))
 	for serviceName := range comp.Services {
 		services = append(services, serviceName)
 	}
@@ -166,13 +163,18 @@ func (comp Composition) Deps(s string) (services []string) {
 	return services
 }
 
+func trimSpaces(sl []string) []string {
+	result := make([]string, len(sl))
+	for i, s := range sl {
+		result[i] = strings.TrimSpace(s)
+	}
+	return result
+}
+
 // error if removed service is a dependencies of another service which should not be removed
 func removeNotWanted(comp Composition, s string) (todo map[string]bool, err error) {
 	todo = make(map[string]bool)
-	var notwanted []string
-	for _, n := range strings.Split(s, ",") {
-		notwanted = append(notwanted, strings.TrimSpace(n))
-	}
+	notwanted := trimSpaces(strings.Split(s, ","))
 
 	for serviceName := range comp.Services {
 		if stringsliceContain(notwanted, serviceName) {

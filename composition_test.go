@@ -192,7 +192,7 @@ func TestGetComposition(t *testing.T) {
 
 func TestRemoveNotWanted(t *testing.T) {
 	comp, _ := compositionFromDockerComposeOutput("test/working-compose.json")
-	var list []string
+	var list []string //nolint:prealloc
 
 	mapList, _ := removeNotWanted(comp, "first-service,third")
 	for k := range mapList {
