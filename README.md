@@ -27,7 +27,7 @@ talks_to = [ "consul","postgres" ]
 
 
 ```
-% ./dependencies -sisu ~/sandbox/git/work/sisu -service actionrequest-service -region eu -environment stg
+% ./dependencies deploy-order ~/sandbox/git/work/sisu stg eu -service actionrequest-service
 deployment order for actionrequest-service service(s)
 "consul"
 "rabbitmq"
@@ -40,7 +40,7 @@ deployment order for actionrequest-service service(s)
   2. Generate a visualization:
 
 ```
-./dependencies -sisu ~/sandbox/git/work/sisu -service certificate-service -region eu -environment stg -format dot > output.dot
+./dependencies deploy-order --format dot ~/sandbox/git/work/sisu stg eu -service certificate-service > output.dot
 dot -Tsvg -o output.svg output.dot
 ```
 

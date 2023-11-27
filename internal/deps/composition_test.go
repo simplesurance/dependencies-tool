@@ -1,4 +1,4 @@
-package main
+package deps
 
 import (
 	"strings"
@@ -41,12 +41,12 @@ func TestVerifyDependencies(t *testing.T) {
 // //
 func TestOutputDotGraph(t *testing.T) {
 	comp := makeTestComp()
-	dot, _ := outputDotGraph(*comp)
+	dot, _ := OutputDotGraph(*comp)
 
 	if !strings.Contains(dot, "\"a\"->\"c\"") {
 		t.Errorf("expected dot to contain '\"a\"->\"c\"' got %v", dot)
 	}
-	_, _ = outputDotGraph(*comp)
+	_, _ = OutputDotGraph(*comp)
 }
 
 func TestAddDependency(t *testing.T) {
@@ -137,5 +137,39 @@ func TestRemoveNotWanted(t *testing.T) {
 
 	if stringsliceContain(list, "first-service") {
 		t.Errorf("expected list to not contain 'first-service'. list: %v", list)
+	}
+}
+
+func TestSanitize(t *testing.T) {
+	s := "mystring"
+	got := sanitize(s)
+	exp := "\"mystring\""
+
+	if got != exp {
+		t.Errorf("expected to be result %v , got %v", exp, got)
+	}
+}
+
+func Equal(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestIsIn(t *testing.T) {
+	testslice := []string{"one", "two"}
+
+	if !stringsliceContain(testslice, "one") {
+		t.Error("expected to be 'one' in testslice")
+	}
+
+	if stringsliceContain(testslice, "three") {
+		t.Error("three is not in testslice")
 	}
 }

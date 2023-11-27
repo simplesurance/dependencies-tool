@@ -1,4 +1,4 @@
-package main
+package deps
 
 import (
 	"fmt"
@@ -23,10 +23,12 @@ type AppDiscover struct {
 
 // FindDepTomls searches for dependencies config files in the AppSearchDirs of the
 // AppDiscover and returns all of them
-func (d BaurConf) FindDepTomls(dir string) (tomls []string, err error) {
-
+func (d BaurConf) FindDepTomls(dir, env, region string) (tomls []string, err error) {
 	for _, searchDir := range d.Discover.AppDirs {
-		depsCfgs, err := findFilesInSubDir(dir+"/"+searchDir, ".deps*.toml", d.Discover.SearchDepth)
+		depsCfgs, err := findFilesInSubDir(
+			dir+"/"+searchDir, ".deps*.toml",
+			env, region, d.Discover.SearchDepth,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("finding dependencies configs failed %w", err)
 		}
@@ -45,19 +47,19 @@ func loadBaurToml(dir string) (d BaurConf, err error) {
 	return d, nil
 }
 
-func depsFileSearchList(region string) []string {
+func depsFileSearchList(env, region string) []string {
 	var fileSearchList []string
 
-	if region != "" && environment != "" {
-		fileSearchList = append(fileSearchList, ".deps-"+environment+"-"+region+".toml")
+	if region != "" && env != "" {
+		fileSearchList = append(fileSearchList, ".deps-"+env+"-"+region+".toml")
 	}
 
 	if region != "" {
 		fileSearchList = append(fileSearchList, ".deps-"+region+".toml")
 	}
 
-	if environment != "" {
-		fileSearchList = append(fileSearchList, ".deps-"+environment+".toml")
+	if env != "" {
+		fileSearchList = append(fileSearchList, ".deps-"+env+".toml")
 	}
 
 	fileSearchList = append(fileSearchList, ".deps.toml")
@@ -67,8 +69,8 @@ func depsFileSearchList(region string) []string {
 
 // realDepsToml returns found override deps.toml based on
 // given environment and / or region
-func realDepsToml(dir, region string) (string, error) {
-	filelist := depsFileSearchList(region)
+func realDepsToml(dir, env, region string) (string, error) {
+	filelist := depsFileSearchList(env, region)
 
 	for _, f := range filelist {
 		file := filepath.Join(dir, f)
@@ -87,7 +89,7 @@ func realDepsToml(dir, region string) (string, error) {
 // findFilesInSubDir returns all directories that contain filename that are in
 // searchDir. The function descends up to maxdepth levels of directories below
 // searchDir
-func findFilesInSubDir(searchDir, filename string, maxdepth int) ([]string, error) {
+func findFilesInSubDir(searchDir, filename, env, region string, maxdepth int) ([]string, error) {
 	var result []string
 	glob := ""
 
@@ -101,7 +103,7 @@ func findFilesInSubDir(searchDir, filename string, maxdepth int) ([]string, erro
 
 		for _, m := range matches {
 			dir := filepath.Dir(m)
-			depsToml, err := realDepsToml(dir, region)
+			depsToml, err := realDepsToml(dir, env, region)
 			if err != nil {
 				return nil, err
 			}
@@ -114,40 +116,15 @@ func findFilesInSubDir(searchDir, filename string, maxdepth int) ([]string, erro
 	return result, nil
 }
 
-func applicationTomls(dir string) (tomls []string, err error) {
+func applicationTomls(dir, env, region string) (tomls []string, err error) {
 	r, err := loadBaurToml(dir + "/.baur.toml")
 	if err != nil {
 		return tomls, err
 	}
-	return r.FindDepTomls(dir)
+	return r.FindDepTomls(dir, env, region)
 }
 
 type tomlService struct {
 	Name    string   `toml:"name"`
 	TalksTo []string `toml:"talks_to"`
-}
-
-func compositionFromSisuDir(directory string) (comp Composition, err error) {
-	comp = *NewComposition()
-
-	tomls, err := applicationTomls(directory)
-	if err != nil {
-		return comp, fmt.Errorf("could not get app tomls, %w", err)
-	}
-
-	for _, tomlfile := range tomls {
-		var t tomlService
-		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
-			return comp, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
-		}
-		service := NewService()
-		if len(t.TalksTo) > 0 {
-			for _, depservice := range t.TalksTo {
-				service.AddDependency(depservice)
-			}
-		}
-		comp.AddService(t.Name, service)
-	}
-
-	return comp, nil
 }
