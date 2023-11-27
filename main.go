@@ -15,7 +15,6 @@ var (
 	sisuDir      string
 	compGraph    string
 	composeFile  string
-	appdirFile   string
 	format       string
 	environment  string
 	region       string
@@ -34,16 +33,8 @@ func validateParams() error {
 		return fmt.Errorf("You can only define one of docker-compose and sisu directory")
 	}
 
-	if sisuDir != "" && appdirFile != "" {
-		return fmt.Errorf("You can only define one of sisu directory and appdir file")
-	}
-
-	if composeFile != "" && appdirFile != "" {
-		return fmt.Errorf("You can only define one of appdir file and docker-compose file")
-	}
-
-	if sisuDir == "" && composeFile == "" && appdirFile == "" {
-		return fmt.Errorf("You need to define one of docker-compose, sisu directory and appdir file")
+	if sisuDir == "" && composeFile == "" {
+		return fmt.Errorf("You need to define one of docker-compose or sisu directory")
 	}
 
 	if format != "text" && format != "dot" {
@@ -63,7 +54,6 @@ func main() {
 	flag.StringVar(&composeFile, "docker-compose", "", "docker-compose file to read from")
 	flag.StringVar(&compGraph, "service", "all", "Dependency graph based on [all|<service-name>]")
 	flag.StringVar(&deps, "deps", "", "show dependencies of single service")
-	flag.StringVar(&appdirFile, "appdirs", "", "path of file with list of appdirs")
 	flag.StringVar(&format, "format", "text", "output format ( text or dot )")
 	flag.StringVar(&environment, "environment", "", "load deps file named '.deps-<environment>.toml'")
 	flag.StringVar(&region, "region", "", "include region in deps file name '.deps-<environment>-<region>'")

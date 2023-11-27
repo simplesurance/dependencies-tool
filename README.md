@@ -5,18 +5,14 @@ dependencies is a small command client tool to get (recursive) dependencies out 
 
 ## How
 
-This tool is currently able to collect dependency informations in 3 ways.
+This tool is currently able to collect dependency informations in 2 ways.
 
   1. provide sisu directory
 
   If you provide the **-sisu** parameter, it will read the **.baur.toml** file to get the directories where to find the applications.
   Inside of the application directory it will look for a **.deps.toml** file where the dependencies of tha application is defined.
 
-  2. provide a **list of deps.toml** in a file
-
-  Providing the parameter **-appdirs** to a file with **.deps.toml** files, where each **.deps.toml** file is seperated by newline.
-
-  3. provide the output of docker-compose as file
+  2. provide the output of docker-compose as file
 
   The parameter **-docker-compose** will read the dependency information out of this file.
 
@@ -52,26 +48,14 @@ deployment order for actionrequest-service service(s)
 [ "...-service","consul","...-service","...-service","postgres" ]
 ```
 
-  3. Current sisu-deploy order
-
-
-```
-% baur ls apps -f path > /tmp/appdirfile
-% ~/go/src/local/dependencies/dependencies -appdirs /tmp/appdirfile
-"consul"
-"postgres"
-...
-...
-```
-
-  4. Generate a visualization:
+  3. Generate a visualization:
 
 ```
 ./dependencies -sisu ~/sandbox/git/work/sisu -service certificate-service -region eu -environment stg -format dot > output.dot
 dot -Tsvg -o output.svg output.dot
 ```
 
-  5. basically every service has a dependency to consul and if data is stored, there is a dependency to postgres as well. If you visualize the dependencies for all services, this will make the graphic a bit confusing. Considered that every service with persistant data has it own database you can give **dependencies** a parameter **-owndb**. This will produce a variation of the graph omitting consul and add appropiate **<servicename>-db**.
+  4. basically every service has a dependency to consul and if data is stored, there is a dependency to postgres as well. If you visualize the dependencies for all services, this will make the graphic a bit confusing. Considered that every service with persistant data has it own database you can give **dependencies** a parameter **-owndb**. This will produce a variation of the graph omitting consul and add appropiate **<servicename>-db**.
 
 ```
 ./dependencies -sisu ~/sandbox/git/work/sisu -owndb -region eu -environment stg  -format dot > output.dot

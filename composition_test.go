@@ -177,13 +177,6 @@ func TestGetComposition(t *testing.T) {
 	}
 	sisuDir = ""
 
-	appdirFile = "test/appdirfile"
-	_, err = getComposition()
-	if err != nil {
-		t.Errorf("expected no error with appdirFile %v, got %v", appdirFile, err)
-	}
-	appdirFile = ""
-
 	_, err = getComposition()
 	if err == nil {
 		t.Error("This should not happen because of validation")

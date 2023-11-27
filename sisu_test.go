@@ -4,32 +4,6 @@ import (
 	"testing"
 )
 
-func TestAppTomlsFromAppDirFile(t *testing.T) {
-	tomls, err := appTomlsFromAppDirFile("test/appdirfile")
-	if err != nil {
-		t.Errorf("expected no error reading appdirFile, got %v", err)
-	}
-	if len(tomls) != 1 {
-		t.Errorf("expected one deps file from appdirfile, got %v", len(tomls))
-	}
-}
-
-func TestCompositionFromAppdirFile(t *testing.T) {
-	comp, err := compositionFromAppdirFile("test/appdirfile")
-	if err != nil {
-		t.Errorf("expected no error reading composition from appdirFile, got %v", err)
-	}
-
-	if len(comp.Services) != 1 {
-		t.Errorf("expected 1 services in composition from appdirFile, got %v", len(comp.Services))
-	}
-
-	_, err = compositionFromAppdirFile("/tmp/nonexistent")
-	if err == nil {
-		t.Errorf("expected error reading composition from /tmp/nonexistent appdirFile, got %v", err)
-	}
-}
-
 func TestCompositionFromSisuDir(t *testing.T) {
 	comp, err := compositionFromSisuDir("test")
 	if err != nil {

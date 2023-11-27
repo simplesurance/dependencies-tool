@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path"
@@ -132,57 +131,6 @@ func compositionFromSisuDir(directory string) (comp Composition, err error) {
 	comp = *NewComposition()
 
 	tomls, err := applicationTomls(directory)
-	if err != nil {
-		return comp, fmt.Errorf("could not get app tomls, %w", err)
-	}
-
-	for _, tomlfile := range tomls {
-		var t tomlService
-		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
-			return comp, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
-		}
-		service := NewService()
-		if len(t.TalksTo) > 0 {
-			for _, depservice := range t.TalksTo {
-				service.AddDependency(depservice, NewDepService())
-			}
-		}
-		comp.AddService(t.Name, service)
-	}
-
-	return comp, nil
-}
-
-func appTomlsFromAppDirFile(file string) (tomls []string, err error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return tomls, err
-	}
-	defer func(file *os.File) {
-		if err := file.Close(); err != nil {
-			fmt.Printf("error closing file %v: %v", file.Name(), err)
-		}
-	}(f)
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		filename := scanner.Text() + "/.deps.toml"
-		if _, err := os.Stat(filename); err == nil {
-			tomls = append(tomls, filename)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return tomls, err
-	}
-
-	return tomls, nil
-}
-
-func compositionFromAppdirFile(file string) (comp Composition, err error) {
-	comp = *NewComposition()
-
-	tomls, err := appTomlsFromAppDirFile(file)
 	if err != nil {
 		return comp, fmt.Errorf("could not get app tomls, %w", err)
 	}
