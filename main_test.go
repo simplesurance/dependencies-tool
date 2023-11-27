@@ -41,12 +41,10 @@ func TestIsIn(t *testing.T) {
 
 func TestValidateParams(t *testing.T) {
 	var tests = []struct {
-		param    []string // input params sisu, compose-file, appdir
+		param    []string // input params sisu, compose-file
 		expected string   //
 	}{
 		{[]string{"given-sisu-dir", "given-compose-file", ""}, "You can only define one of docker-compose"},
-		{[]string{"given-sisu-dir", "", "given-appdir-file"}, "You can only define one of sisu directory"},
-		{[]string{"", "given-compose-file", "given-appdir-file"}, "You can only define one of appdir file"},
 		{[]string{"", "", ""}, "You need to define one of"},
 	}
 	format = "text"
@@ -54,7 +52,6 @@ func TestValidateParams(t *testing.T) {
 	for _, tt := range tests {
 		sisuDir = tt.param[0]
 		composeFile = tt.param[1]
-		appdirFile = tt.param[2]
 
 		err := validateParams()
 		if !strings.HasPrefix(err.Error(), tt.expected) {

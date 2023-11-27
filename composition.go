@@ -320,9 +320,5 @@ func getComposition() (comp Composition, err error) {
 		return compositionFromSisuDir(sisuDir)
 	}
 
-	if appdirFile != "" {
-		return compositionFromAppdirFile(appdirFile)
-	}
-
 	return comp, fmt.Errorf("Do not know what to %v", "do")
 }
