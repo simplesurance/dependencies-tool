@@ -77,9 +77,7 @@ func (comp *Composition) PrepareForOwnDb() {
 // VerifyDependencies checks if all given dependencies are valid
 // it takes a comma separated list of service names.
 // These dependencies should be ignored which can be handy when you have external managed ones.
-func (comp *Composition) VerifyDependencies(verifyIgnore string) (err error) {
-	ignored := trimSpaces(strings.Split(verifyIgnore, ","))
-
+func (comp *Composition) VerifyDependencies() (err error) {
 	services := make([]string, 0, len(comp.Services))
 	for serviceName := range comp.Services {
 		services = append(services, serviceName)
@@ -87,9 +85,6 @@ func (comp *Composition) VerifyDependencies(verifyIgnore string) (err error) {
 
 	for serviceName := range comp.Services {
 		for depService := range comp.Services[serviceName].DependsOn {
-			if stringsliceContain(ignored, depService) {
-				continue
-			}
 			if !stringsliceContain(services, depService) {
 				return fmt.Errorf("The app %q was specified as dependency of %q but the app was not found in the repository",
 					depService, serviceName,

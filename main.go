@@ -8,16 +8,15 @@ import (
 )
 
 var (
-	owndb        bool
-	verify       bool
-	verifyIgnore string
-	deps         string
-	sisuDir      string
-	compGraph    string
-	composeFile  string
-	format       string
-	environment  string
-	region       string
+	owndb       bool
+	verify      bool
+	deps        string
+	sisuDir     string
+	compGraph   string
+	composeFile string
+	format      string
+	environment string
+	region      string
 )
 
 func sanitize(in string) string {
@@ -49,7 +48,6 @@ func main() {
 	flag.BoolVar(&owndb, "owndb", false, "build graph with postgres-db per service (default false)")
 	flag.BoolVar(&verify, "verify", false, "verify defined dependencies")
 
-	flag.StringVar(&verifyIgnore, "verify-ignore", "", "comma separated list of service names ignored during verification")
 	flag.StringVar(&sisuDir, "sisu", "", "sisu root directory")
 	flag.StringVar(&composeFile, "docker-compose", "", "docker-compose file to read from")
 	flag.StringVar(&compGraph, "service", "all", "Dependency graph based on [all|<service-name>]")
@@ -78,7 +76,7 @@ func main() {
 	}
 
 	if verify {
-		if err := composition.VerifyDependencies(verifyIgnore); err != nil {
+		if err := composition.VerifyDependencies(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
