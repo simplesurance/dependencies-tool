@@ -27,12 +27,8 @@ func TestVerifyDependencies(t *testing.T) {
 	dService.AddDependency("notDefined", NewDepService())
 	comp.AddService("d", dService)
 
-	if err := comp.VerifyDependencies(""); err == nil {
-		t.Error("expected error in validation without ignoring 'notDefined' service")
-	}
-
-	if err := comp.VerifyDependencies("notDefined"); err != nil {
-		t.Error("expected no error in validation with ignoring 'notDefined' service")
+	if err := comp.VerifyDependencies(); err == nil {
+		t.Error("expected error in validation with 'notDefined' service")
 	}
 }
 
