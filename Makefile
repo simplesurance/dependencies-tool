@@ -1,4 +1,4 @@
-default: dependencies-tool
+default: all
 
 .PHONY: dependencies-tool
 dependencies-tool:
@@ -11,3 +11,6 @@ check:
 .PHONY: test
 test:
 	go test -race ./...
+
+.PHONY: all
+all: dependencies-tool check test
