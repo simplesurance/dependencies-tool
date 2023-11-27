@@ -143,7 +143,7 @@ func compositionFromSisuDir(directory string) (comp Composition, err error) {
 		service := NewService()
 		if len(t.TalksTo) > 0 {
 			for _, depservice := range t.TalksTo {
-				service.AddDependency(depservice, NewDepService())
+				service.AddDependency(depservice)
 			}
 		}
 		comp.AddService(t.Name, service)

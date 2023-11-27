@@ -5,13 +5,20 @@ import (
 	"testing"
 )
 
-func makeTestComp() (comp *Composition) {
-	aService := NewService()
-	bService := NewService()
-	cService := NewService()
+func newTestComp() Composition {
+	return Composition{Services: map[string]Service{
+		"first-service":  NewService("third"),
+		"second-service": NewService("first-service", "consul", "third-service", "postgres"),
+		"third-service":  NewService("consul", "postgres"),
+		"fourth-service": NewService("fifth-service"),
+		"fifth-service":  NewService(),
+	}}
+}
 
-	aService.AddDependency("c", NewDepService())
-	bService.AddDependency("a", NewDepService())
+func makeTestComp() (comp *Composition) {
+	aService := NewService("c")
+	bService := NewService("a")
+	cService := NewService()
 
 	comp = NewComposition()
 	comp.AddService("b", bService)
@@ -23,8 +30,7 @@ func makeTestComp() (comp *Composition) {
 
 func TestVerifyDependencies(t *testing.T) {
 	comp := makeTestComp()
-	dService := NewService()
-	dService.AddDependency("notDefined", NewDepService())
+	dService := NewService("notDefined")
 	comp.AddService("d", dService)
 
 	if err := comp.VerifyDependencies(); err == nil {
@@ -50,8 +56,7 @@ func TestOutputDotGraph(t *testing.T) {
 }
 
 func TestPrepareForOwnDb(t *testing.T) {
-	a := NewService()
-	a.AddDependency("postgres", NewDepService())
+	a := NewService("postgres")
 	comp := NewComposition()
 	comp.AddService("a", a)
 	comp.PrepareForOwnDb()
@@ -62,12 +67,9 @@ func TestPrepareForOwnDb(t *testing.T) {
 }
 
 func TestAddDependency(t *testing.T) {
-	service := NewService()
-	dep := NewDepService()
+	service := NewService("dep1")
 
-	service.AddDependency("dep1", dep)
-
-	if service.DependsOn["dep1"] != dep {
+	if _, exists := service.DependsOn["dep1"]; !exists {
 		t.Errorf("expected to have 'dep1' in Service.DependsOn got '%v'", service.DependsOn["dep1"])
 	}
 }
@@ -95,7 +97,8 @@ func TestRecursiveDepsOf(t *testing.T) {
 }
 
 func TestRecursiveDepsOfWithListOfServices(t *testing.T) {
-	comp, _ := compositionFromDockerComposeOutput("test/working-compose.json")
+	comp := newTestComp()
+
 	got, _ := comp.RecursiveDepsOf("fourth-service,first-service")
 
 	_, ok := got.Services["fifth-service"]
@@ -103,6 +106,7 @@ func TestRecursiveDepsOfWithListOfServices(t *testing.T) {
 		t.Error("expected to have 'fifth-service' in composition")
 	}
 
+	// second-service is dependent on first-service but not in 'not:' filter list
 	_, err := comp.RecursiveDepsOf("not:first-service")
 	if err == nil {
 		t.Error("expected error with 'not:first-service' ")
@@ -110,8 +114,7 @@ func TestRecursiveDepsOfWithListOfServices(t *testing.T) {
 }
 
 func TestRecursiveDepsOfWithNot(t *testing.T) {
-	comp, _ := compositionFromDockerComposeOutput("test/working-compose.json")
-
+	comp := newTestComp()
 	notGot, _ := comp.RecursiveDepsOf("not:first-service,second-service")
 
 	_, ok := notGot.Services["first-service"]
@@ -121,7 +124,7 @@ func TestRecursiveDepsOfWithNot(t *testing.T) {
 }
 
 func TestRecursiveDepsOfWithListOfServicesAndBlank(t *testing.T) {
-	comp, _ := compositionFromDockerComposeOutput("test/working-compose.json")
+	comp := newTestComp()
 	got, _ := comp.RecursiveDepsOf("fifth-service, fourth-service")
 
 	_, ok := got.Services["fourth-service"]
@@ -132,7 +135,6 @@ func TestRecursiveDepsOfWithListOfServicesAndBlank(t *testing.T) {
 
 func TestDeployOrder(t *testing.T) {
 	comp := makeTestComp()
-
 	exp := []string{"\"c\"", "\"a\"", "\"b\""}
 	got, _ := comp.DeploymentOrder()
 
@@ -141,46 +143,8 @@ func TestDeployOrder(t *testing.T) {
 	}
 }
 
-func TestCompositionFromDockerComposeOutput(t *testing.T) {
-	_, err := compositionFromDockerComposeOutput("test/working-compose.json")
-	if err != nil {
-		t.Errorf("expected to get working composition from test/working-compose.json. got %v", err)
-	}
-
-	_, err = compositionFromDockerComposeOutput("test/nonexistant")
-	if err == nil {
-		t.Error("expected to fail from test/nonexistant. ")
-	}
-
-	_, err = compositionFromDockerComposeOutput("test/broken.json")
-	if err == nil {
-		t.Error("expected to fail from test/broken.json. ")
-	}
-}
-
-func TestGetComposition(t *testing.T) {
-	composeFile = "test/working-compose.json"
-	_, err := getComposition()
-	if err != nil {
-		t.Errorf("expected no error with compose file %v, got %v", composeFile, err)
-	}
-	composeFile = ""
-
-	sisuDir = "test"
-	_, err = getComposition()
-	if err != nil {
-		t.Errorf("expected no error with sisu dir %v, got %v", sisuDir, err)
-	}
-	sisuDir = ""
-
-	_, err = getComposition()
-	if err == nil {
-		t.Error("This should not happen because of validation")
-	}
-}
-
 func TestRemoveNotWanted(t *testing.T) {
-	comp, _ := compositionFromDockerComposeOutput("test/working-compose.json")
+	comp := newTestComp()
 	var list []string //nolint:prealloc
 
 	mapList, _ := removeNotWanted(comp, "first-service,third")

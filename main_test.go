@@ -40,23 +40,16 @@ func TestIsIn(t *testing.T) {
 }
 
 func TestValidateParams(t *testing.T) {
-	var tests = []struct {
-		param    []string // input params sisu, compose-file
-		expected string   //
-	}{
-		{[]string{"given-sisu-dir", "given-compose-file", ""}, "You can only define one of docker-compose"},
-		{[]string{"", "", ""}, "You need to define one of"},
-	}
 	format = "text"
+	sisuDir = ""
+	expectedErrMsgPrefix := "You need to define sisu directory"
 
-	for _, tt := range tests {
-		sisuDir = tt.param[0]
-		composeFile = tt.param[1]
-
-		err := validateParams()
-		if !strings.HasPrefix(err.Error(), tt.expected) {
-			t.Errorf("expected errorstring in paramsvalidation to start with %v, got %v", tt.expected, err.Error())
-		}
+	err := validateParams()
+	if err == nil {
+		t.Fatal("expected a validation error, got nil")
+	}
+	if !strings.HasPrefix(err.Error(), expectedErrMsgPrefix) {
+		t.Errorf("expected errorstring in paramsvalidation to start with %v, got %v", expectedErrMsgPrefix, err.Error())
 	}
 	sisuDir = "given-sisu"
 	if err := validateParams(); err != nil {

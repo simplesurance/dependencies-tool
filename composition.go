@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 
@@ -12,32 +10,25 @@ import (
 	"github.com/simplesurance/dependencies-tool/graphs"
 )
 
-// DepService ...
-type DepService struct {
-	Condition string `json:"condition"`
-}
-
-// NewDepService creates new DepService
-func NewDepService() DepService {
-	return DepService{}
-}
-
 // Service ...
 type Service struct {
-	DependsOn map[string]DepService `json:"depends_on"`
+	DependsOn map[string]struct{} `json:"depends_on"`
 }
 
 // AddDependency adds a service
-func (s *Service) AddDependency(name string, service DepService) {
+func (s *Service) AddDependency(name string) {
 	if _, ok := s.DependsOn[name]; !ok {
-		s.DependsOn[name] = service
+		s.DependsOn[name] = struct{}{}
 	}
 }
 
 // NewService creates a new Service
-func NewService() Service {
-	deps := make(map[string]DepService)
-	return Service{DependsOn: deps}
+func NewService(deps ...string) Service {
+	m := map[string]struct{}{}
+	for _, dep := range deps {
+		m[dep] = struct{}{}
+	}
+	return Service{DependsOn: m}
 }
 
 // Composition ...
@@ -291,29 +282,4 @@ func outputDotGraph(comp Composition) (s string, err error) {
 	}
 
 	return graph.String(), nil
-}
-
-func compositionFromDockerComposeOutput(file string) (comp Composition, err error) {
-	byteValue, err := os.ReadFile(file)
-	if err != nil {
-		return comp, fmt.Errorf("could not read file %w", err)
-	}
-
-	if err = json.Unmarshal(byteValue, &comp); err != nil {
-		return comp, fmt.Errorf("could not unmarshal %w", err)
-	}
-	return comp, nil
-}
-
-func getComposition() (comp Composition, err error) {
-
-	if composeFile != "" {
-		return compositionFromDockerComposeOutput(composeFile)
-	}
-
-	if sisuDir != "" {
-		return compositionFromSisuDir(sisuDir)
-	}
-
-	return comp, fmt.Errorf("Do not know what to %v", "do")
 }

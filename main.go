@@ -13,7 +13,6 @@ var (
 	deps        string
 	sisuDir     string
 	compGraph   string
-	composeFile string
 	format      string
 	environment string
 	region      string
@@ -28,12 +27,8 @@ func validateParams() error {
 		return fmt.Errorf("extranous commandline arguments: '%s'", strings.Join(flag.Args(), " "))
 	}
 
-	if sisuDir != "" && composeFile != "" {
-		return fmt.Errorf("You can only define one of docker-compose and sisu directory")
-	}
-
-	if sisuDir == "" && composeFile == "" {
-		return fmt.Errorf("You need to define one of docker-compose or sisu directory")
+	if sisuDir == "" {
+		return fmt.Errorf("You need to define sisu directory")
 	}
 
 	if format != "text" && format != "dot" {
@@ -49,7 +44,6 @@ func main() {
 	flag.BoolVar(&verify, "verify", false, "verify defined dependencies")
 
 	flag.StringVar(&sisuDir, "sisu", "", "sisu root directory")
-	flag.StringVar(&composeFile, "docker-compose", "", "docker-compose file to read from")
 	flag.StringVar(&compGraph, "service", "all", "Dependency graph based on [all|<service-name>]")
 	flag.StringVar(&deps, "deps", "", "show dependencies of single service")
 	flag.StringVar(&format, "format", "text", "output format ( text or dot )")
@@ -65,7 +59,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	composition, err := getComposition()
+
+	composition, err := compositionFromSisuDir(sisuDir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
