@@ -42,29 +42,6 @@ func NewComposition() *Composition {
 	return &Composition{Services: svs}
 }
 
-// PrepareForOwnDb ... clear composition from consul and postgres Service
-// Depservices called postgres will be renamed to <servicename>-db
-func (comp *Composition) PrepareForOwnDb() {
-
-	for serviceName := range comp.Services {
-		if serviceName == "postgres" || serviceName == "consul" {
-			delete(comp.Services, serviceName)
-			continue
-		}
-
-		for depservice := range comp.Services[serviceName].DependsOn {
-			if depservice == "postgres" {
-				ds := comp.Services[serviceName].DependsOn[depservice]
-				comp.Services[serviceName].DependsOn[serviceName+"-db"] = ds
-				delete(comp.Services[serviceName].DependsOn, "postgres")
-			}
-			if depservice == "consul" {
-				continue
-			}
-		}
-	}
-}
-
 // VerifyDependencies checks if all given dependencies are valid
 // it takes a comma separated list of service names.
 // These dependencies should be ignored which can be handy when you have external managed ones.

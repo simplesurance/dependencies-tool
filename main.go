@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	owndb       bool
 	verify      bool
 	deps        string
 	sisuDir     string
@@ -39,8 +38,6 @@ func validateParams() error {
 }
 
 func main() {
-
-	flag.BoolVar(&owndb, "owndb", false, "build graph with postgres-db per service (default false)")
 	flag.BoolVar(&verify, "verify", false, "verify defined dependencies")
 
 	flag.StringVar(&sisuDir, "sisu", "", "sisu root directory")
@@ -64,10 +61,6 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-
-	if owndb {
-		composition.PrepareForOwnDb()
 	}
 
 	if verify {

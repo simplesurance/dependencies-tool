@@ -46,24 +46,7 @@ func TestOutputDotGraph(t *testing.T) {
 	if !strings.Contains(dot, "\"a\"->\"c\"") {
 		t.Errorf("expected dot to contain '\"a\"->\"c\"' got %v", dot)
 	}
-	// add consul but ignore in dot
-	comp.AddService("consul", NewService())
-	comp.PrepareForOwnDb()
-	dot2, _ := outputDotGraph(*comp)
-	if strings.Contains(dot2, "consul") {
-		t.Errorf("expected no consul in dotgraph, got %v", dot2)
-	}
-}
-
-func TestPrepareForOwnDb(t *testing.T) {
-	a := NewService("postgres")
-	comp := NewComposition()
-	comp.AddService("a", a)
-	comp.PrepareForOwnDb()
-	dot, _ := outputDotGraph(*comp)
-	if !strings.Contains(dot, "a-db") {
-		t.Error("expected an own db for service a in dotgraph")
-	}
+	_, _ = outputDotGraph(*comp)
 }
 
 func TestAddDependency(t *testing.T) {
