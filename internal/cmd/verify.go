@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/simplesurance/dependencies-tool/internal/deps"
@@ -44,6 +46,8 @@ func (c *verify) run(*cobra.Command, []string) error {
 	if err := composition.VerifyDependencies(); err != nil {
 		return err
 	}
+
+	fmt.Println("verification successful")
 
 	return nil
 }
