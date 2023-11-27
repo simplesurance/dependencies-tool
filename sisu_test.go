@@ -5,7 +5,7 @@ import (
 )
 
 func TestCompositionFromSisuDir(t *testing.T) {
-	comp, err := compositionFromSisuDir("test")
+	comp, err := compositionFromSisuDir("testdata")
 	if err != nil {
 		t.Errorf("expected no error reading composition from sisudir test, got %v", err)
 	}
@@ -36,7 +36,7 @@ func TestCompositionFromSisuDirenv2(t *testing.T) {
 		region = table.reg
 		f := false
 
-		comp, err := compositionFromSisuDir("test")
+		comp, err := compositionFromSisuDir("testdata")
 		if err != nil {
 			t.Errorf("expected no error reading composition from sisudir test, got %v", err)
 		}
