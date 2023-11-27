@@ -1,11 +1,11 @@
-package main
+package deps
 
 import (
 	"testing"
 )
 
 func TestCompositionFromSisuDir(t *testing.T) {
-	comp, err := compositionFromSisuDir("testdata")
+	comp, err := CompositionFromSisuDir("testdata", "stg", "eu")
 	if err != nil {
 		t.Errorf("expected no error reading composition from sisudir test, got %v", err)
 	}
@@ -32,11 +32,9 @@ func TestCompositionFromSisuDirenv2(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		environment = table.env
-		region = table.reg
 		f := false
 
-		comp, err := compositionFromSisuDir("testdata")
+		comp, err := CompositionFromSisuDir("testdata", table.env, table.reg)
 		if err != nil {
 			t.Errorf("expected no error reading composition from sisudir test, got %v", err)
 		}
@@ -60,7 +58,7 @@ func TestLoadBaurTomlError(t *testing.T) {
 		t.Error("expected error loading /tmp/nonexistend baur.toml")
 	}
 
-	_, err = applicationTomls("/tmp/nonexistent")
+	_, err = applicationTomls("/tmp/nonexistent", "stg", "jp")
 	if err == nil {
 		t.Error("expected error loading /tmp/nonexistend baur.toml")
 	}

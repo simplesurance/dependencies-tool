@@ -1,10 +1,11 @@
-package main
+package deps
 
 import (
 	"fmt"
 	"slices"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/awalterschulze/gographviz"
 
 	"github.com/simplesurance/dependencies-tool/graphs"
@@ -42,6 +43,31 @@ func NewComposition() *Composition {
 	return &Composition{Services: svs}
 }
 
+func CompositionFromSisuDir(directory, env, region string) (comp Composition, err error) {
+	comp = *NewComposition()
+
+	tomls, err := applicationTomls(directory, env, region)
+	if err != nil {
+		return comp, fmt.Errorf("could not get app tomls, %w", err)
+	}
+
+	for _, tomlfile := range tomls {
+		var t tomlService
+		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
+			return comp, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
+		}
+		service := NewService()
+		if len(t.TalksTo) > 0 {
+			for _, depservice := range t.TalksTo {
+				service.AddDependency(depservice)
+			}
+		}
+		comp.AddService(t.Name, service)
+	}
+
+	return comp, nil
+}
+
 // VerifyDependencies checks if all given dependencies are valid
 // it takes a comma separated list of service names.
 // These dependencies should be ignored which can be handy when you have external managed ones.
@@ -69,6 +95,10 @@ func (comp *Composition) AddService(name string, service Service) {
 	if _, ok := comp.Services[name]; !ok {
 		comp.Services[name] = service
 	}
+}
+
+func sanitize(in string) string {
+	return "\"" + in + "\""
 }
 
 // DeploymentOrder ... deploy from order[0] to order[len(order) -1] :)
@@ -224,7 +254,7 @@ func sortableGraph(comp Composition) (graph *graphs.Graph, err error) {
 	return graph, nil
 }
 
-func outputDotGraph(comp Composition) (s string, err error) {
+func OutputDotGraph(comp Composition) (s string, err error) {
 	graph := gographviz.NewGraph()
 	graph.Name = "G"
 	graph.Directed = true
