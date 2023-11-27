@@ -44,13 +44,6 @@ deployment order for actionrequest-service service(s)
 dot -Tsvg -o output.svg output.dot
 ```
 
-  3. basically every service has a dependency to consul and if data is stored, there is a dependency to postgres as well. If you visualize the dependencies for all services, this will make the graphic a bit confusing. Considered that every service with persistant data has it own database you can give **dependencies** a parameter **-owndb**. This will produce a variation of the graph omitting consul and add appropiate **<servicename>-db**.
-
-```
-./dependencies -sisu ~/sandbox/git/work/sisu -owndb -region eu -environment stg  -format dot > output.dot
-dot -Tsvg -o output.svg output.dot
-```
-
 ## Version Management
 
 The sisu-deploy Jenkins Job uses the dependency tool during deployment.
