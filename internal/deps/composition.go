@@ -156,33 +156,6 @@ func (comp Composition) Deps(s string) (services []string) {
 	return services
 }
 
-func trimSpaces(sl []string) []string {
-	result := make([]string, len(sl))
-	for i, s := range sl {
-		result[i] = strings.TrimSpace(s)
-	}
-	return result
-}
-
-// error if removed service is a dependencies of another service which should not be removed
-func removeNotWanted(comp Composition, s string) (todo map[string]bool, err error) {
-	todo = make(map[string]bool)
-	notwanted := trimSpaces(strings.Split(s, ","))
-
-	for serviceName := range comp.Services {
-		if stringsliceContain(notwanted, serviceName) {
-			continue
-		}
-		for depService := range comp.Services[serviceName].DependsOn {
-			if stringsliceContain(notwanted, depService) {
-				return todo, fmt.Errorf("%s is dependent on %s but not in 'not:' filter list", serviceName, depService)
-			}
-		}
-		todo[serviceName] = true
-	}
-	return todo, err
-}
-
 // RecursiveDepsOf returns Composition with services and dependencies of given servicename
 // servicename can be a comma separated list of servicenames
 func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err error) {
@@ -190,15 +163,6 @@ func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err err
 	todo := make(map[string]bool)
 
 	for _, n := range strings.Split(s, ",") {
-		if strings.HasPrefix(n, "not:") {
-			todo, err = removeNotWanted(comp, s[4:])
-			if err != nil {
-				return newcomp, err
-			}
-			added = append(added, strings.Split(s[4:], ",")...)
-			break
-		}
-
 		todo[strings.TrimSpace(n)] = true
 	}
 
