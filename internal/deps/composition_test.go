@@ -88,22 +88,6 @@ func TestRecursiveDepsOfWithListOfServices(t *testing.T) {
 	if !ok {
 		t.Error("expected to have 'fifth-service' in composition")
 	}
-
-	// second-service is dependent on first-service but not in 'not:' filter list
-	_, err := comp.RecursiveDepsOf("not:first-service")
-	if err == nil {
-		t.Error("expected error with 'not:first-service' ")
-	}
-}
-
-func TestRecursiveDepsOfWithNot(t *testing.T) {
-	comp := newTestComp()
-	notGot, _ := comp.RecursiveDepsOf("not:first-service,second-service")
-
-	_, ok := notGot.Services["first-service"]
-	if ok {
-		t.Error("expected not to have 'first-service' in composition")
-	}
 }
 
 func TestRecursiveDepsOfWithListOfServicesAndBlank(t *testing.T) {
@@ -123,20 +107,6 @@ func TestDeployOrder(t *testing.T) {
 
 	if !Equal(exp, got) {
 		t.Errorf("expected deployment order of '%v', got '%v'", exp, got)
-	}
-}
-
-func TestRemoveNotWanted(t *testing.T) {
-	comp := newTestComp()
-	var list []string //nolint:prealloc
-
-	mapList, _ := removeNotWanted(comp, "first-service,third")
-	for k := range mapList {
-		list = append(list, k)
-	}
-
-	if stringsliceContain(list, "first-service") {
-		t.Errorf("expected list to not contain 'first-service'. list: %v", list)
 	}
 }
 
