@@ -148,7 +148,7 @@ func (c *deployOrder) run(cc *cobra.Command, _ []string) error {
 			cc.Println(i)
 		}
 	case "dot":
-		fmt.Printf("###########\n# dot of %s\n##########\n", strings.Join(c.apps, ", "))
+		cc.Printf("###########\n# dot of %s\n##########\n", strings.Join(c.apps, ", "))
 		depsgraph, err := deps.OutputDotGraph(depsfrom)
 		if err != nil {
 			return err
