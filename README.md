@@ -43,24 +43,3 @@ deployment order for actionrequest-service service(s)
 ./dependencies deploy-order --format dot ~/sandbox/git/work/sisu stg eu -service certificate-service > output.dot
 dot -Tsvg -o output.svg output.dot
 ```
-
-## Version Management
-
-The sisu-deploy Jenkins Job uses the dependency tool during deployment.
-The Jenkins jobs needs to use the dependency-tool version that is compatible
-with the current branch.
-Incompatibles can be introduced by e.g.:
-- changes in the baur configuration file and builds of the dependency-tool that
-- use newer baur packages,
-- syntax changes in `.deps.toml`,
-- changes in the commandline parameter of the depdencies-tool
-
-Compatibility between the sisu-deploy job, the branch that is deployed and the
-tool is done by:
-
-- Adding a version number to the artifact filename that is uploaded to S3
-  in its `.app.toml` file.
-- Ensuring in the `sisu-deploy.Jenkinsfile` that the compatible
-  dependencies-tool version is used,
-- Executing the `sisu-deploy.Jenkinsfile` from the branch that is deployed in the
-  Jenkins job
