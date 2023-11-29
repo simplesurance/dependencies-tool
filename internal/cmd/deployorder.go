@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/simplesurance/dependencies-tool/internal/cmd/fs"
 	"github.com/simplesurance/dependencies-tool/internal/deps"
 )
 
@@ -49,7 +49,7 @@ type deployOrder struct {
 	eEnv   string
 	region string
 
-	srcType pathType
+	srcType fs.PathType
 }
 
 func newDeployOrder() *deployOrder {
@@ -81,18 +81,18 @@ func newDeployOrder() *deployOrder {
 				strings.Join(supportedFormats, ", "))
 		}
 
-		pType, err := fileOrDir(args[0])
+		pType, err := fs.FileOrDir(args[0])
 		if err != nil {
 			return err
 		}
 
 		switch pType {
-		case pathTypeDir:
+		case fs.PathTypeDir:
 			if len(args) != 3 {
 				return fmt.Errorf("expecting 3 arguments, got: %d", len(args))
 			}
 
-		case pathTypeFile:
+		case fs.PathTypeFile:
 			if len(args) != 1 {
 				return fmt.Errorf("expecting 1 arguments, got: %d", len(args))
 			}
@@ -165,37 +165,13 @@ func validateAppsParam(apps []string) error {
 
 func (c *deployOrder) loadComposition() (*deps.Composition, error) {
 	switch c.srcType {
-	case pathTypeDir:
+	case fs.PathTypeDir:
 		return deps.CompositionFromSisuDir(c.src, c.eEnv, c.region)
 
-	case pathTypeFile:
+	case fs.PathTypeFile:
 		return deps.CompositionFromJSON(c.src)
 
 	default:
 		panic(fmt.Sprintf("SrcType has unexpected value: %d", c.srcType))
 	}
-}
-
-type pathType int
-
-const (
-	pathTypeDir pathType = iota
-	pathTypeFile
-)
-
-func fileOrDir(path string) (pathType, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return -1, err
-	}
-
-	if info.IsDir() {
-		return pathTypeDir, nil
-	}
-
-	if info.Mode().IsRegular() {
-		return pathTypeFile, nil
-	}
-
-	return -1, fmt.Errorf("path isn't a directory or a regular file")
 }
