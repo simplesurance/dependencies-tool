@@ -22,13 +22,13 @@ func TestCompositionFromSisuDirenv2(t *testing.T) {
 		reg string
 		exp string
 	}{
-		{"stg", "", "\"stg-service\""},
-		{"", "eu", "\"eu-service\""},
-		{"stg", "eu", "\"stg-eu-service\""},
-		{"", "", "\"default-service\""},
-		{"noenv", "", "\"default-service\""},
-		{"", "noreg", "\"default-service\""},
-		{"noenv", "noreg", "\"default-service\""},
+		{"stg", "", "stg-service"},
+		{"", "eu", "eu-service"},
+		{"stg", "eu", "stg-eu-service"},
+		{"", "", "default-service"},
+		{"noenv", "", "default-service"},
+		{"", "noreg", "default-service"},
+		{"noenv", "noreg", "default-service"},
 	}
 
 	for _, table := range tables {

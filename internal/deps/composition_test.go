@@ -38,13 +38,13 @@ func TestVerifyDependencies(t *testing.T) {
 	}
 }
 
-// //
 func TestOutputDotGraph(t *testing.T) {
 	comp := makeTestComp()
 	dot, _ := OutputDotGraph(*comp)
 
-	if !strings.Contains(dot, "\"a\"->\"c\"") {
-		t.Errorf("expected dot to contain '\"a\"->\"c\"' got %v", dot)
+	const expected = "a->c"
+	if !strings.Contains(dot, expected) {
+		t.Errorf("expected dot to contain %q got %q", expected, dot)
 	}
 	_, _ = OutputDotGraph(*comp)
 }
@@ -61,7 +61,7 @@ func TestDeps(t *testing.T) {
 	comp := makeTestComp()
 
 	got := comp.Deps("a")
-	if !Equal(got, []string{"\"c\""}) {
+	if !Equal(got, []string{"c"}) {
 		t.Errorf("expected dep of service a to be %v, got %v", "[\"c\"]", got)
 	}
 }
@@ -69,7 +69,7 @@ func TestDeps(t *testing.T) {
 func TestRecursiveDepsOf(t *testing.T) {
 
 	comp := makeTestComp()
-	exp := []string{"\"c\"", "\"a\""}
+	exp := []string{"c", "a"}
 
 	got, _ := comp.RecursiveDepsOf("a")
 	order, _ := got.DeploymentOrder()
@@ -102,7 +102,7 @@ func TestRecursiveDepsOfWithListOfServicesAndBlank(t *testing.T) {
 
 func TestDeployOrder(t *testing.T) {
 	comp := makeTestComp()
-	exp := []string{"\"c\"", "\"a\"", "\"b\""}
+	exp := []string{"c", "a", "b"}
 	got, _ := comp.DeploymentOrder()
 
 	if !Equal(exp, got) {
@@ -112,8 +112,8 @@ func TestDeployOrder(t *testing.T) {
 
 func TestSanitize(t *testing.T) {
 	s := "mystring"
-	got := sanitize(s)
-	exp := "\"mystring\""
+	got := s
+	exp := "mystring"
 
 	if got != exp {
 		t.Errorf("expected to be result %v , got %v", exp, got)

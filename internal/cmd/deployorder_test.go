@@ -35,10 +35,10 @@ func TestExportImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const expectedOut = `"stg-eu-service"
-"postgres"
-"consul"
-"a-service"
+	const expectedOut = `stg-eu-service
+postgres
+consul
+a-service
 `
 	outStr := stdoutBuf.String()
 	if outStr != expectedOut {
