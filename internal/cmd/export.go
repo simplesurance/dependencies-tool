@@ -8,6 +8,14 @@ import (
 	"github.com/simplesurance/dependencies-tool/internal/deps"
 )
 
+const exportCmdShortHelp = "Generate a dependency tree and export it to a file."
+
+var exportCmdLongHelp = exportCmdShortHelp + "\n\n" +
+	`Positional Arguments:
+` + descRootDirArg + `
+` + descrEnvRegionArgs + `
+` + descrDependencyFileNames
+
 type exportCmd struct {
 	*cobra.Command
 
@@ -21,7 +29,8 @@ func newExportCmd() *exportCmd {
 	cmd := exportCmd{
 		Command: &cobra.Command{
 			Use:   "export ROOT-DIR ENVIRONMENT REGION DEST-FILE",
-			Short: "Write the parsed dependency tree to a file.",
+			Short: exportCmdShortHelp,
+			Long:  exportCmdLongHelp,
 			Args:  cobra.ExactArgs(4),
 		},
 	}
