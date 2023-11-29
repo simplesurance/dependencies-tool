@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -58,7 +59,7 @@ type deployOrder struct {
 }
 
 func newDeployOrder() *deployOrder {
-	supportedFormats := []string{"text", "dot"}
+	supportedFormats := []string{"text", "dot", "json"}
 
 	cmd := deployOrder{
 		Command: &cobra.Command{
@@ -155,6 +156,15 @@ func (c *deployOrder) run(cc *cobra.Command, _ []string) error {
 		}
 
 		cc.Println(depsgraph)
+	case "json":
+		secondsorted, err := depsfrom.DeploymentOrder()
+		if err != nil {
+			return fmt.Errorf("could not generate graph: %w", err)
+		}
+
+		enc := json.NewEncoder(cc.OutOrStdout())
+		enc.SetIndent("", "    ")
+		return enc.Encode(secondsorted)
 	}
 
 	return nil
