@@ -12,26 +12,26 @@ import (
 type exportCmd struct {
 	*cobra.Command
 
-	Root     string
-	Env      string
-	Region   string
-	DestFile string
+	root     string
+	env      string
+	region   string
+	destFile string
 }
 
 func newExportCmd() *exportCmd {
 	cmd := exportCmd{
 		Command: &cobra.Command{
-			Use:   "export ROOT-PATH ENVIRONMENT REGION DEST-FILE",
+			Use:   "export ROOT-DIR ENVIRONMENT REGION DEST-FILE",
 			Short: "Write the parsed dependency tree to a file.",
 			Args:  cobra.ExactArgs(4),
 		},
 	}
 
 	cmd.PreRunE = func(_ *cobra.Command, args []string) error {
-		cmd.Root = args[0]
-		cmd.Env = args[1]
-		cmd.Region = args[2]
-		cmd.DestFile = args[3]
+		cmd.root = args[0]
+		cmd.env = args[1]
+		cmd.region = args[2]
+		cmd.destFile = args[3]
 
 		return nil
 	}
@@ -41,17 +41,17 @@ func newExportCmd() *exportCmd {
 }
 
 func (c *exportCmd) run(*cobra.Command, []string) error {
-	absPath, err := filepath.Abs(c.DestFile)
+	absPath, err := filepath.Abs(c.destFile)
 	if err != nil {
 		return err
 	}
 
-	cmp, err := deps.CompositionFromSisuDir(c.Root, c.Env, c.Region)
+	cmp, err := deps.CompositionFromSisuDir(c.root, c.env, c.region)
 	if err != nil {
 		return err
 	}
 
-	err = cmp.ToJSONFile(c.DestFile)
+	err = cmp.ToJSONFile(c.destFile)
 	if err != nil {
 		return err
 	}
