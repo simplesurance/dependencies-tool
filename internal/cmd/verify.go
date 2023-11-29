@@ -1,10 +1,20 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/simplesurance/dependencies-tool/internal/deps"
 )
+
+const verifyShortHelp = "Verify dependency files"
+
+var verifyLongHelp = verifyShortHelp + "\n\n" + strings.TrimSpace(`
+Positional Arguments:
+`+descRootDirArg+`
+`+descrEnvRegionArgs+`
+`+descrDependencyFileNames)
 
 type verify struct {
 	*cobra.Command
@@ -17,7 +27,8 @@ func newVerify() *verify {
 	cmd := verify{
 		Command: &cobra.Command{
 			Use:   "verify PATH ENVIRONMENT REGION",
-			Short: "Verify dependency files",
+			Short: verifyShortHelp,
+			Long:  verifyLongHelp,
 			Args:  cobra.ExactArgs(3),
 		},
 	}
