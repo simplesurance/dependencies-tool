@@ -1,6 +1,8 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
 func newRoot() *cobra.Command {
 	const shortDesc = "Visualize Dependencies and generate deployment orders"
@@ -13,6 +15,7 @@ func newRoot() *cobra.Command {
 
 	root.AddCommand(newDeployOrder().Command)
 	root.AddCommand(newVerify().Command)
+	root.AddCommand(newExportCmd().Command)
 
 	return root
 }
