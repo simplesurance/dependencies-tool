@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -21,5 +23,6 @@ func newRoot() *cobra.Command {
 
 func Execute() {
 	root := newRoot()
+	root.SetOut(os.Stdout)
 	_ = root.Execute()
 }
