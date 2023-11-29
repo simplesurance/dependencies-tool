@@ -2,16 +2,20 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"path/filepath"
+	"slices"
 	"testing"
 )
+
+var relTestDataDirPath = filepath.Join("..", "deps", "testdata")
 
 func TestExportImport(t *testing.T) {
 	tmpdir := t.TempDir()
 	destFile := filepath.Join(tmpdir, "tree.json")
 
 	exportcmd := newExportCmd()
-	exportcmd.root = filepath.Join("..", "deps", "testdata")
+	exportcmd.root = relTestDataDirPath
 	exportcmd.region = "eu"
 	exportcmd.env = "stg"
 	exportcmd.destFile = destFile
@@ -43,5 +47,33 @@ a-service
 	outStr := stdoutBuf.String()
 	if outStr != expectedOut {
 		t.Errorf("got deployorder:\n---\n%s---\n\nexpected:\n---\n%s\n---", outStr, expectedOut)
+	}
+}
+
+func TestDeployOrderInJson(t *testing.T) {
+	deployOrderCmd := newDeployOrder()
+	deployOrderCmd.format = "json"
+
+	err := deployOrderCmd.PreRunE(nil, []string{relTestDataDirPath, "stg", "eu"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stdoutBuf := bytes.Buffer{}
+	deployOrderCmd.Command.SetOut(&stdoutBuf)
+
+	err = deployOrderCmd.run(deployOrderCmd.Command, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var res []string
+	err = json.Unmarshal(stdoutBuf.Bytes(), &res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []string{"stg-eu-service", "postgres", "consul", "a-service"}
+	if !slices.Equal(res, expected) {
+		t.Errorf("expected unmarshaled json result: %v, got: %v", expected, res)
 	}
 }
