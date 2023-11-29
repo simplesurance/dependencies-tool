@@ -11,7 +11,6 @@ func newRoot() *cobra.Command {
 
 	root := &cobra.Command{
 		Short:        shortDesc,
-		Long:         descrDependencyFileNames,
 		SilenceUsage: true,
 	}
 
