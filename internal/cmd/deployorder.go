@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -13,8 +14,12 @@ import (
 const deployOrderShortHelp = "Generate a deployment order."
 
 var descrDependencyFileNames = strings.TrimSpace(`
-Dependency definition files are discovered by searching in all child directories
-of PATH.
+The command can use as input either a marshalled dependency-tree file 
+or read and parse .deps*.toml file that are found in a parent directory to
+generate a dependency-tree.
+
+If the path to a directory is specified, dependency definitions files are
+discovered by searching in all child directories of SRC-PATH.
 Files that match the following names are discovered, only the first found per
 directory is parsed, the preference order is:
 
@@ -25,7 +30,8 @@ directory is parsed, the preference order is:
 
 var deployOrderLongHelp = deployOrderShortHelp + "\n\n" + strings.TrimSpace(`
 Positional Arguments:
-  PATH		- Root Directory for the dependency file discovery.
+  ROOT-DIR	- Path to root directory for the dependency file discovery.
+  DEP-TREE-FILE	- Path to an exported JSON dependency tree.
   ENVIRONMENT   - Value that is used as the ENVIRONMENT placeholder of the 
                   searched dependency file names.
   REGION        - Value that is used as the REGION placeholder of the searched
@@ -37,21 +43,13 @@ type deployOrder struct {
 	*cobra.Command
 
 	Format string
+	Apps   []string
 
-	// positional arguments
-	Path   string
+	Src    string
 	Env    string
 	Region string
-	Apps   []string
-}
 
-func validateAppsParam(apps []string) error {
-	for i, app := range apps {
-		if strings.TrimSpace(app) == "" {
-			return fmt.Errorf("app parameter %d contains only whitespaces or is empty: %q", i+1, app)
-		}
-	}
-	return nil
+	SrcType pathType
 }
 
 func newDeployOrder() *deployOrder {
@@ -59,10 +57,10 @@ func newDeployOrder() *deployOrder {
 
 	cmd := deployOrder{
 		Command: &cobra.Command{
-			Use:   "deploy-order PATH ENVIRONMENT REGION",
+			Use:   "deploy-order (ROOT-DIR ENVIRONMENT REGION)|DEP-TREE-FILE)",
 			Short: "Generate a deployment order from dependencies",
 			Long:  deployOrderLongHelp,
-			Args:  cobra.ExactArgs(3),
+			Args:  cobra.MinimumNArgs(1),
 		},
 	}
 
@@ -83,9 +81,30 @@ func newDeployOrder() *deployOrder {
 				strings.Join(supportedFormats, ", "))
 		}
 
-		cmd.Path = args[0]
+		pType, err := fileOrDir(args[0])
+		if err != nil {
+			return err
+		}
+
+		switch pType {
+		case pathTypeDir:
+			if len(args) != 3 {
+				return fmt.Errorf("expecting 3 arguments, got: %d", len(args))
+			}
+
+		case pathTypeFile:
+			if len(args) != 1 {
+				return fmt.Errorf("expecting 1 arguments, got: %d", len(args))
+			}
+
+		default:
+			panic(fmt.Sprintf("fileOrDir returned unexpected result (%d, %s)", pType, err))
+		}
+
+		cmd.Src = args[0]
 		cmd.Env = args[1]
 		cmd.Region = args[2]
+		cmd.SrcType = pType
 
 		return validateAppsParam(cmd.Apps)
 	}
@@ -97,13 +116,13 @@ func newDeployOrder() *deployOrder {
 func (c *deployOrder) run(*cobra.Command, []string) error {
 	var depsfrom deps.Composition
 
-	composition, err := deps.CompositionFromSisuDir(c.Path, c.Env, c.Region)
+	composition, err := c.loadComposition()
 	if err != nil {
 		return err
 	}
 
 	if len(c.Apps) == 0 {
-		depsfrom = composition
+		depsfrom = *composition
 	} else {
 		deps, err := composition.RecursiveDepsOf(strings.Join(c.Apps, ","))
 		if err != nil {
@@ -133,4 +152,50 @@ func (c *deployOrder) run(*cobra.Command, []string) error {
 	}
 
 	return nil
+}
+
+func validateAppsParam(apps []string) error {
+	for i, app := range apps {
+		if strings.TrimSpace(app) == "" {
+			return fmt.Errorf("app parameter %d contains only whitespaces or is empty: %q", i+1, app)
+		}
+	}
+	return nil
+}
+
+func (c *deployOrder) loadComposition() (*deps.Composition, error) {
+	switch c.SrcType {
+	case pathTypeDir:
+		return deps.CompositionFromSisuDir(c.Src, c.Env, c.Region)
+
+	case pathTypeFile:
+		return deps.CompositionFromJSON(c.Src)
+
+	default:
+		panic(fmt.Sprintf("SrcType has unexpected value: %d", c.SrcType))
+	}
+}
+
+type pathType int
+
+const (
+	pathTypeDir pathType = iota
+	pathTypeFile
+)
+
+func fileOrDir(path string) (pathType, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return -1, err
+	}
+
+	if info.IsDir() {
+		return pathTypeDir, nil
+	}
+
+	if info.Mode().IsRegular() {
+		return pathTypeFile, nil
+	}
+
+	return -1, fmt.Errorf("path isn't a directory or a regular file")
 }
