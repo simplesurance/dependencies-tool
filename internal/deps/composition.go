@@ -90,7 +90,7 @@ func (comp *Composition) VerifyDependencies() (err error) {
 
 	for serviceName := range comp.Services {
 		for depService := range comp.Services[serviceName].DependsOn {
-			if !stringsliceContain(services, depService) {
+			if !slices.Contains(services, depService) {
 				return fmt.Errorf("The app %q was specified as dependency of %q but the app was not found in the repository",
 					depService, serviceName,
 				)
@@ -140,7 +140,7 @@ func (comp Composition) DeploymentOrder() (order []string, err error) {
 	// graphs.TopologicalSort() deletes services which are no dependencies
 	// and have no dependencies so we add them again
 	for _, n := range nodeps {
-		if !stringsliceContain(reverse, n) {
+		if !slices.Contains(reverse, n) {
 			reverse = append(reverse, n)
 		}
 	}
@@ -186,13 +186,13 @@ func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err err
 			}
 
 			newcomp.Services[serviceName] = comp.Services[serviceName]
-			if !stringsliceContain(added, serviceName) {
+			if !slices.Contains(added, serviceName) {
 				added = append(added, serviceName)
 			}
 			delete(todo, serviceName)
 
 			for name := range comp.Services[serviceName].DependsOn {
-				if !stringsliceContain(added, name) {
+				if !slices.Contains(added, name) {
 					todo[name] = true
 				}
 			}
