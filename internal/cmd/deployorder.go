@@ -42,14 +42,14 @@ Positional Arguments:
 type deployOrder struct {
 	*cobra.Command
 
-	Format string
-	Apps   []string
+	format string
+	apps   []string
 
-	Src    string
-	Env    string
-	Region string
+	src    string
+	eEnv   string
+	region string
 
-	SrcType pathType
+	srcType pathType
 }
 
 func newDeployOrder() *deployOrder {
@@ -65,19 +65,19 @@ func newDeployOrder() *deployOrder {
 	}
 
 	cmd.Flags().StringVar(
-		&cmd.Format, "format", "text",
+		&cmd.format, "format", "text",
 		fmt.Sprintf("output format, supported values: %s",
 			strings.Join(supportedFormats, ", ")),
 	)
 	cmd.Flags().StringSliceVar(
-		&cmd.Apps, "apps", nil,
+		&cmd.apps, "apps", nil,
 		"comma-separated list of apps to generate the deploy order for, "+
 			"if unset, the deploy-order is generated for all found apps.",
 	)
 
 	cmd.PreRunE = func(_ *cobra.Command, args []string) error {
-		if !slices.Contains(supportedFormats, cmd.Format) {
-			return fmt.Errorf("unsupported --format values: %q, expecting one of: %s ", cmd.Format,
+		if !slices.Contains(supportedFormats, cmd.format) {
+			return fmt.Errorf("unsupported --format values: %q, expecting one of: %s ", cmd.format,
 				strings.Join(supportedFormats, ", "))
 		}
 
@@ -101,12 +101,12 @@ func newDeployOrder() *deployOrder {
 			panic(fmt.Sprintf("fileOrDir returned unexpected result (%d, %s)", pType, err))
 		}
 
-		cmd.Src = args[0]
-		cmd.Env = args[1]
-		cmd.Region = args[2]
-		cmd.SrcType = pType
+		cmd.src = args[0]
+		cmd.eEnv = args[1]
+		cmd.region = args[2]
+		cmd.srcType = pType
 
-		return validateAppsParam(cmd.Apps)
+		return validateAppsParam(cmd.apps)
 	}
 	cmd.RunE = cmd.run
 
@@ -121,17 +121,17 @@ func (c *deployOrder) run(*cobra.Command, []string) error {
 		return err
 	}
 
-	if len(c.Apps) == 0 {
+	if len(c.apps) == 0 {
 		depsfrom = *composition
 	} else {
-		deps, err := composition.RecursiveDepsOf(strings.Join(c.Apps, ","))
+		deps, err := composition.RecursiveDepsOf(strings.Join(c.apps, ","))
 		if err != nil {
 			return err
 		}
 		depsfrom = *deps
 	}
 
-	switch c.Format {
+	switch c.format {
 	case "text":
 		secondsorted, err := depsfrom.DeploymentOrder()
 		if err != nil {
@@ -142,7 +142,7 @@ func (c *deployOrder) run(*cobra.Command, []string) error {
 			fmt.Println(i)
 		}
 	case "dot":
-		fmt.Printf("###########\n# dot of %s\n##########\n", strings.Join(c.Apps, ", "))
+		fmt.Printf("###########\n# dot of %s\n##########\n", strings.Join(c.apps, ", "))
 		depsgraph, err := deps.OutputDotGraph(depsfrom)
 		if err != nil {
 			return err
@@ -164,15 +164,15 @@ func validateAppsParam(apps []string) error {
 }
 
 func (c *deployOrder) loadComposition() (*deps.Composition, error) {
-	switch c.SrcType {
+	switch c.srcType {
 	case pathTypeDir:
-		return deps.CompositionFromSisuDir(c.Src, c.Env, c.Region)
+		return deps.CompositionFromSisuDir(c.src, c.eEnv, c.region)
 
 	case pathTypeFile:
-		return deps.CompositionFromJSON(c.Src)
+		return deps.CompositionFromJSON(c.src)
 
 	default:
-		panic(fmt.Sprintf("SrcType has unexpected value: %d", c.SrcType))
+		panic(fmt.Sprintf("SrcType has unexpected value: %d", c.srcType))
 	}
 }
 
