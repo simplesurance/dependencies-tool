@@ -13,19 +13,18 @@ import (
 	"github.com/simplesurance/dependencies-tool/graphs"
 )
 
-// Service ...
 type Service struct {
 	DependsOn map[string]struct{} `json:"depends_on"`
 }
 
-// AddDependency adds a service
+// AddDependency declares name to be a dependency of s.
 func (s *Service) AddDependency(name string) {
 	if _, ok := s.DependsOn[name]; !ok {
 		s.DependsOn[name] = struct{}{}
 	}
 }
 
-// NewService creates a new Service
+// NewService creates a Service
 func NewService(deps ...string) Service {
 	m := map[string]struct{}{}
 	for _, dep := range deps {
@@ -34,12 +33,11 @@ func NewService(deps ...string) Service {
 	return Service{DependsOn: m}
 }
 
-// Composition ...
 type Composition struct {
 	Services map[string]Service `json:"services"`
 }
 
-// NewComposition creates a new Composition
+// NewComposition creates a Composition
 func NewComposition() *Composition {
 	svs := make(map[string]Service)
 	return &Composition{Services: svs}
@@ -103,7 +101,7 @@ func (comp *Composition) VerifyDependencies() (err error) {
 	return nil
 }
 
-// AddService adds a Service
+// AddService adds a Service with the given name to the Composition.
 func (comp *Composition) AddService(name string, service Service) {
 	if _, ok := comp.Services[name]; !ok {
 		comp.Services[name] = service
@@ -112,7 +110,6 @@ func (comp *Composition) AddService(name string, service Service) {
 
 // DeploymentOrder ... deploy from order[0] to order[len(order) -1] :)
 func (comp Composition) DeploymentOrder() (order []string, err error) {
-
 	var reverse []string
 	var nodeps []string
 

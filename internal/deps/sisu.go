@@ -40,7 +40,6 @@ func (d BaurConf) FindDepTomls(dir, env, region string) (tomls []string, err err
 }
 
 func loadBaurToml(dir string) (d BaurConf, err error) {
-
 	if _, err := toml.DecodeFile(dir, &d); err != nil {
 		return d, fmt.Errorf("could not load '%s %w", dir, err)
 	}
