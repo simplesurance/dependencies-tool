@@ -30,9 +30,6 @@ Positional Arguments:
                   searched dependency file names.
   REGION        - Value that is used as the REGION placeholder of the searched
 		  dependency file names.
-  APP-NAME      - Application names for that the deployment order is generated.
-                  If not specified, the dependencies of all applications are 
-		  evaluated.
 
 `+descrDependencyFileNames)
 
@@ -48,15 +45,24 @@ type deployOrder struct {
 	Apps   []string
 }
 
+func validateAppsParam(apps []string) error {
+	for i, app := range apps {
+		if strings.TrimSpace(app) == "" {
+			return fmt.Errorf("app parameter %d contains only whitespaces or is empty: %q", i+1, app)
+		}
+	}
+	return nil
+}
+
 func newDeployOrder() *deployOrder {
 	supportedFormats := []string{"text", "dot"}
 
 	cmd := deployOrder{
 		Command: &cobra.Command{
-			Use:   "deploy-order PATH ENVIRONMENT REGION [APP-NAME]...]",
+			Use:   "deploy-order PATH ENVIRONMENT REGION",
 			Short: "Generate a deployment order from dependencies",
 			Long:  deployOrderLongHelp,
-			Args:  cobra.MinimumNArgs(3),
+			Args:  cobra.ExactArgs(3),
 		},
 	}
 
@@ -65,6 +71,12 @@ func newDeployOrder() *deployOrder {
 		fmt.Sprintf("output format, supported values: %s",
 			strings.Join(supportedFormats, ", ")),
 	)
+	cmd.Flags().StringSliceVar(
+		&cmd.Apps, "apps", nil,
+		"comma-separated list of apps to generate the deploy order for, "+
+			"if unset, the deploy-order is generated for all found apps.",
+	)
+
 	cmd.PreRunE = func(_ *cobra.Command, args []string) error {
 		if !slices.Contains(supportedFormats, cmd.Format) {
 			return fmt.Errorf("unsupported --format values: %q, expecting one of: %s ", cmd.Format,
@@ -74,11 +86,8 @@ func newDeployOrder() *deployOrder {
 		cmd.Path = args[0]
 		cmd.Env = args[1]
 		cmd.Region = args[2]
-		if len(args) > 3 {
-			cmd.Apps = args[3:]
-		}
 
-		return nil
+		return validateAppsParam(cmd.Apps)
 	}
 	cmd.RunE = cmd.run
 
