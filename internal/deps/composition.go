@@ -1,7 +1,9 @@
 package deps
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -199,6 +201,21 @@ func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err err
 	}
 
 	return newcomp, nil
+}
+
+func (comp *Composition) ToJSONFile(path string) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		return err
+	}
+
+	err = json.NewEncoder(f).Encode(comp)
+	if err != nil {
+		_ = f.Close()
+		return err
+	}
+
+	return f.Close()
 }
 
 func sortableGraph(comp Composition) (graph *graphs.Graph, err error) {
