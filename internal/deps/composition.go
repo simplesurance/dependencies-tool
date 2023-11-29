@@ -185,7 +185,6 @@ func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err err
 			_, ok := comp.Services[serviceName]
 
 			if !ok {
-				//return newcomp, fmt.Errorf("Service %v is unknown", serviceName)
 				comp.AddService(serviceName, NewService())
 			}
 
@@ -238,7 +237,6 @@ func sortableGraph(comp Composition) (graph *graphs.Graph, err error) {
 		}
 	}
 
-	//fmt.Printf("graph: %#v", graph)
 	return graph, nil
 }
 
