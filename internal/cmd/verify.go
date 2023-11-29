@@ -36,8 +36,6 @@ func newVerify() *verify {
 }
 
 func (c *verify) run(*cobra.Command, []string) error {
-	var composition deps.Composition
-
 	composition, err := deps.CompositionFromSisuDir(c.Path, c.Env, c.Region)
 	if err != nil {
 		return err

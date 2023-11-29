@@ -45,18 +45,17 @@ func NewComposition() *Composition {
 	return &Composition{Services: svs}
 }
 
-func CompositionFromSisuDir(directory, env, region string) (comp Composition, err error) {
-	comp = *NewComposition()
-
+func CompositionFromSisuDir(directory, env, region string) (*Composition, error) {
 	tomls, err := applicationTomls(directory, env, region)
 	if err != nil {
-		return comp, fmt.Errorf("could not get app tomls, %w", err)
+		return nil, fmt.Errorf("could not get app tomls, %w", err)
 	}
 
+	comp := NewComposition()
 	for _, tomlfile := range tomls {
 		var t tomlService
 		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
-			return comp, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
+			return nil, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
 		}
 		service := NewService()
 		if len(t.TalksTo) > 0 {
@@ -68,6 +67,22 @@ func CompositionFromSisuDir(directory, env, region string) (comp Composition, er
 	}
 
 	return comp, nil
+}
+
+func CompositionFromJSON(filePath string) (*Composition, error) {
+	var result Composition
+
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.NewDecoder(fd).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 // VerifyDependencies checks if all given dependencies are valid
