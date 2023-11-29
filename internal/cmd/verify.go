@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/simplesurance/dependencies-tool/internal/deps"
@@ -35,7 +33,7 @@ func newVerify() *verify {
 	return &cmd
 }
 
-func (c *verify) run(*cobra.Command, []string) error {
+func (c *verify) run(cc *cobra.Command, _ []string) error {
 	composition, err := deps.CompositionFromSisuDir(c.path, c.env, c.region)
 	if err != nil {
 		return err
@@ -45,7 +43,7 @@ func (c *verify) run(*cobra.Command, []string) error {
 		return err
 	}
 
-	fmt.Println("verification successful")
+	cc.Println("verification successful")
 
 	return nil
 }
