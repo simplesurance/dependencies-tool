@@ -14,12 +14,8 @@ import (
 const deployOrderShortHelp = "Generate a deployment order."
 
 var descrDependencyFileNames = strings.TrimSpace(`
-The command can use as input either a marshalled dependency-tree file 
-or read and parse .deps*.toml file that are found in a parent directory to
-generate a dependency-tree.
-
-If the path to a directory is specified, dependency definitions files are
-discovered by searching in all child directories of SRC-PATH.
+Dependency definitions files are discovered by searching in all child
+directories of ROOT-DIR.
 Files that match the following names are discovered, only the first found per
 directory is parsed, the preference order is:
 
@@ -29,14 +25,22 @@ directory is parsed, the preference order is:
   4. .deps.toml
 `)
 
-var deployOrderLongHelp = deployOrderShortHelp + "\n\n" + strings.TrimSpace(`
-Positional Arguments:
-  ROOT-DIR	- Path to root directory for the dependency file discovery.
-  DEP-TREE-FILE	- Path to an exported JSON dependency tree.
-  ENVIRONMENT   - Value that is used as the ENVIRONMENT placeholder of the 
+const descRootDirArg = `  ROOT-DIR	- Path to root directory for the dependency file discovery.`
+
+const descrEnvRegionArgs = `  ENVIRONMENT   - Value that is used as the ENVIRONMENT placeholder of the 
                   searched dependency file names.
   REGION        - Value that is used as the REGION placeholder of the searched
 		  dependency file names.
+`
+
+var deployOrderLongHelp = deployOrderShortHelp + "\n\n" + strings.TrimSpace(`
+Positional Arguments:
+`+descRootDirArg+`
+  DEP-TREE-FILE	- Path to an exported JSON dependency tree.
+`+descrEnvRegionArgs+`
+The command can use as input either a marshalled dependency-tree file (DEP-TREE-FILE)
+or read and parse .deps*.toml file that are found in child directories of
+ROOT-DIR to generate a dependency-tree.
 
 `+descrDependencyFileNames)
 
@@ -72,7 +76,7 @@ func newDeployOrder() *deployOrder {
 	)
 	cmd.Flags().StringSliceVar(
 		&cmd.apps, "apps", nil,
-		"comma-separated list of apps to generate the deploy order for, "+
+		"comma-separated list of apps to generate the deploy order for,\n"+
 			"if unset, the deploy-order is generated for all found apps.",
 	)
 
