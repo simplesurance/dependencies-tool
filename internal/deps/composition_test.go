@@ -1,6 +1,7 @@
 package deps
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -135,11 +136,11 @@ func Equal(a, b []string) bool {
 func TestIsIn(t *testing.T) {
 	testslice := []string{"one", "two"}
 
-	if !stringsliceContain(testslice, "one") {
+	if !slices.Contains(testslice, "one") {
 		t.Error("expected to be 'one' in testslice")
 	}
 
-	if stringsliceContain(testslice, "three") {
+	if slices.Contains(testslice, "three") {
 		t.Error("three is not in testslice")
 	}
 }
