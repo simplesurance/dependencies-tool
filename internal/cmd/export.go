@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -40,7 +39,7 @@ func newExportCmd() *exportCmd {
 	return &cmd
 }
 
-func (c *exportCmd) run(*cobra.Command, []string) error {
+func (c *exportCmd) run(cc *cobra.Command, _ []string) error {
 	absPath, err := filepath.Abs(c.destFile)
 	if err != nil {
 		return err
@@ -56,7 +55,7 @@ func (c *exportCmd) run(*cobra.Command, []string) error {
 		return err
 	}
 
-	fmt.Printf("written dependency tree to %s\n", absPath)
+	cc.Printf("written dependency tree to %s\n", absPath)
 
 	return nil
 }

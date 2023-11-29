@@ -47,7 +47,7 @@ type deployOrder struct {
 	apps   []string
 
 	src    string
-	eEnv   string
+	Env    string
 	region string
 
 	srcType fs.PathType
@@ -93,6 +93,9 @@ func newDeployOrder() *deployOrder {
 				return fmt.Errorf("expecting 3 arguments, got: %d", len(args))
 			}
 
+			cmd.Env = args[1]
+			cmd.region = args[2]
+
 		case fs.PathTypeFile:
 			if len(args) != 1 {
 				return fmt.Errorf("expecting 1 arguments, got: %d", len(args))
@@ -103,8 +106,6 @@ func newDeployOrder() *deployOrder {
 		}
 
 		cmd.src = args[0]
-		cmd.eEnv = args[1]
-		cmd.region = args[2]
 		cmd.srcType = pType
 
 		return validateAppsParam(cmd.apps)
@@ -114,7 +115,7 @@ func newDeployOrder() *deployOrder {
 	return &cmd
 }
 
-func (c *deployOrder) run(*cobra.Command, []string) error {
+func (c *deployOrder) run(cc *cobra.Command, _ []string) error {
 	var depsfrom deps.Composition
 
 	composition, err := c.loadComposition()
@@ -140,7 +141,7 @@ func (c *deployOrder) run(*cobra.Command, []string) error {
 		}
 
 		for _, i := range secondsorted {
-			fmt.Println(i)
+			cc.Println(i)
 		}
 	case "dot":
 		fmt.Printf("###########\n# dot of %s\n##########\n", strings.Join(c.apps, ", "))
@@ -149,7 +150,7 @@ func (c *deployOrder) run(*cobra.Command, []string) error {
 			return err
 		}
 
-		fmt.Println(depsgraph)
+		cc.Println(depsgraph)
 	}
 
 	return nil
@@ -167,7 +168,7 @@ func validateAppsParam(apps []string) error {
 func (c *deployOrder) loadComposition() (*deps.Composition, error) {
 	switch c.srcType {
 	case fs.PathTypeDir:
-		return deps.CompositionFromSisuDir(c.src, c.eEnv, c.region)
+		return deps.CompositionFromSisuDir(c.src, c.Env, c.region)
 
 	case fs.PathTypeFile:
 		return deps.CompositionFromJSON(c.src)
