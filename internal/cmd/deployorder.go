@@ -23,9 +23,10 @@ discovered by searching in all child directories of SRC-PATH.
 Files that match the following names are discovered, only the first found per
 directory is parsed, the preference order is:
 
-  1. .deps-<ENVIRONMENT>-<REGION>.toml
-  2. .deps-<ENVIRONMENT>.toml
-  3. .deps.toml
+  1. .deps-<ENV>-<REGION>.toml
+  2. .deps-<REGION>.toml
+  3. .deps-<ENVIRONMENT>.toml
+  4. .deps.toml
 `)
 
 var deployOrderLongHelp = deployOrderShortHelp + "\n\n" + strings.TrimSpace(`
