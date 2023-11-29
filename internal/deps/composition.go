@@ -57,12 +57,8 @@ func CompositionFromSisuDir(directory, env, region string) (*Composition, error)
 		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
 			return nil, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
 		}
-		service := NewService()
-		if len(t.TalksTo) > 0 {
-			for _, depservice := range t.TalksTo {
-				service.AddDependency(depservice)
-			}
-		}
+
+		service := NewService(t.TalksTo...)
 		comp.AddService(t.Name, service)
 	}
 
