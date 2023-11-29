@@ -114,10 +114,6 @@ func (comp *Composition) AddService(name string, service Service) {
 	}
 }
 
-func sanitize(in string) string {
-	return "\"" + in + "\""
-}
-
 // DeploymentOrder ... deploy from order[0] to order[len(order) -1] :)
 func (comp Composition) DeploymentOrder() (order []string, err error) {
 
@@ -126,7 +122,7 @@ func (comp Composition) DeploymentOrder() (order []string, err error) {
 
 	for serviceName := range comp.Services {
 		if len(comp.Services[serviceName].DependsOn) == 0 {
-			nodeps = append(nodeps, sanitize(serviceName))
+			nodeps = append(nodeps, serviceName)
 		}
 	}
 
@@ -167,7 +163,7 @@ func (comp Composition) DeploymentOrder() (order []string, err error) {
 func (comp Composition) Deps(s string) (services []string) {
 	if _, ok := comp.Services[s]; ok {
 		for depservice := range comp.Services[s].DependsOn {
-			services = append(services, sanitize(depservice))
+			services = append(services, depservice)
 		}
 	}
 	return services
@@ -237,11 +233,11 @@ func sortableGraph(comp Composition) (graph *graphs.Graph, err error) {
 	graph = graphs.NewDigraph()
 
 	for service, dependencies := range comp.Services {
-		s := sanitize(service)
+		s := service
 		graph.AddVertex(s)
 
 		for depservice := range dependencies.DependsOn {
-			d := sanitize(depservice)
+			d := depservice
 			graph.AddEdge(s, d)
 		}
 	}
@@ -263,14 +259,14 @@ func OutputDotGraph(comp Composition) (s string, err error) {
 	}
 
 	for service, dependencies := range comp.Services {
-		s := sanitize(service)
+		s := service
 
 		if err := graph.AddNode("G", s, nil); err != nil {
 			return s, fmt.Errorf("could not add service %v to graph: %w", service, err)
 		}
 
 		for depservice := range dependencies.DependsOn {
-			d := sanitize(depservice)
+			d := depservice
 
 			if !graph.IsNode(d) {
 				if err := graph.AddNode("G", d, nil); err != nil {
