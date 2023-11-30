@@ -24,5 +24,10 @@ func newRoot() *cobra.Command {
 func Execute() {
 	root := newRoot()
 	root.SetOut(os.Stdout)
-	_ = root.Execute()
+
+	if err := root.Execute(); err != nil {
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }
