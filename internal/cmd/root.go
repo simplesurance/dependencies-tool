@@ -6,12 +6,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// version is set via goreleaser
+var version = "UNDEFINED"
+
 func newRoot() *cobra.Command {
 	const shortDesc = "Visualize Dependencies and generate deployment orders"
 
 	root := &cobra.Command{
 		Short:        shortDesc,
 		SilenceUsage: true,
+		Version:      version,
 	}
 
 	root.AddCommand(newDeployOrder().Command)
