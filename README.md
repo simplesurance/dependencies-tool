@@ -10,8 +10,9 @@ dependency trees.
 This tool is able to generate dependency trees from the following inputs:
 
 1. A directory tree containing `.deps*.toml` files in child directories.
-   It reads the `Discover.application_dirs` list of the `.baur.toml` in the root
-   directory. In all sub-directories of the `Discover.application_dirs`
+   It reads the `Discover.application_dirs` list of the
+   [`.baur.toml`](https://github.com/simplesurance/baur/) in the root directory.
+   In all sub-directories of the `Discover.application_dirs`
    directories, it searches looks for files matching the following names, the
    first found in the following preference order is read:
 
@@ -48,5 +49,3 @@ talks_to = ["consul", "postgres"]
     ```sh
     dependencies-tool deploy-order --format dot --apps actionrequest-service ~/git/sisu eu staging
     ```
-
----
