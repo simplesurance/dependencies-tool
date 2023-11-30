@@ -1,2 +1,4 @@
 dependencies-tool
 *.orig
+
+dist/
