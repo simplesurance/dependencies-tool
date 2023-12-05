@@ -15,8 +15,21 @@ func TestCompositionFromSisuDir(t *testing.T) {
 	}
 }
 
-func TestCompositionFromSisuDirenv2(t *testing.T) {
+func TestCompositionIgnoreFileWithoutDeployDir(t *testing.T) {
+	comp, err := CompositionFromSisuDir("testdata", "stg", "eu")
+	if err != nil {
+		t.Errorf("expected no error reading composition from sisudir test, got %v", err)
+	}
 
+	order, err := comp.DeploymentOrder(false)
+	fatalOnErr(t, err)
+
+	if len(order) != 1 {
+		t.Errorf("expected multiple services in composition from appdirFile, got %v", len(comp.Services))
+	}
+}
+
+func TestCompositionFromSisuDirenv2(t *testing.T) {
 	tables := []struct {
 		env string
 		reg string
