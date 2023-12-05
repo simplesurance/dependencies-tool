@@ -17,7 +17,7 @@
      variable:
 
        ```sh
-        export GPG_PASSWORD="$(vault read -field=master-priv-key-password secret/gpg-key-platform)"
+       export GPG_PASSWORD="$(vault read -field=master-priv-key-password secret/gpg-key-platform)"
        ```
 
    - import the signing key:
@@ -39,6 +39,6 @@
     goreleaser release
     ```
 
-6. Review the created draft release on
+5. Review the created draft release on
    [GitHub](https://github.com/simplesurance/dependencies-tool/releases) and
    publish it.
