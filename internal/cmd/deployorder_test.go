@@ -34,12 +34,14 @@ func TestExportImport(t *testing.T) {
 
 	stdoutBuf := bytes.Buffer{}
 	deployOrderCmd.Command.SetOut(&stdoutBuf)
+	deployOrderCmd.includeAppsWithoutDeployDir = true
 
 	err = deployOrderCmd.run(deployOrderCmd.Command, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	const expectedOut = `stg-eu-service
+	const expectedOut = `b-service
+stg-eu-service
 postgres
 consul
 a-service
@@ -53,6 +55,7 @@ a-service
 func TestDeployOrderInJson(t *testing.T) {
 	deployOrderCmd := newDeployOrder()
 	deployOrderCmd.format = "json"
+	deployOrderCmd.includeAppsWithoutDeployDir = true
 
 	err := deployOrderCmd.PreRunE(nil, []string{relTestDataDirPath, "stg", "eu"})
 	if err != nil {
@@ -72,7 +75,7 @@ func TestDeployOrderInJson(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := []string{"stg-eu-service", "postgres", "consul", "a-service"}
+	expected := []string{"b-service", "stg-eu-service", "postgres", "consul", "a-service"}
 	if !slices.Equal(res, expected) {
 		t.Errorf("expected unmarshaled json result: %v, got: %v", expected, res)
 	}

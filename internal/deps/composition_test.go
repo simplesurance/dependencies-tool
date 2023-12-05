@@ -8,31 +8,33 @@ import (
 
 func newTestComp() Composition {
 	return Composition{Services: map[string]Service{
-		"first-service":  NewService("third"),
-		"second-service": NewService("first-service", "consul", "third-service", "postgres"),
-		"third-service":  NewService("consul", "postgres"),
-		"fourth-service": NewService("fifth-service"),
-		"fifth-service":  NewService(),
+		"first-service":  NewService(true, "third"),
+		"second-service": NewService(true, "first-service", "consul", "third-service", "postgres"),
+		"third-service":  NewService(true, "consul", "postgres"),
+		"fourth-service": NewService(true, "fifth-service"),
+		"fifth-service":  NewService(true),
 	}}
 }
 
 func makeTestComp() (comp *Composition) {
-	aService := NewService("c")
-	bService := NewService("a")
-	cService := NewService()
+	aService := NewService(true, "c")
+	bService := NewService(true, "a")
+	cService := NewService(true)
+	dService := NewService(false, "c")
 
 	comp = NewComposition()
 	comp.AddService("b", bService)
 	comp.AddService("c", cService)
 	comp.AddService("a", aService)
+	comp.AddService("d", dService)
 
 	return comp
 }
 
 func TestVerifyDependencies(t *testing.T) {
 	comp := makeTestComp()
-	dService := NewService("notDefined")
-	comp.AddService("d", dService)
+	eService := NewService(true, "notDefined")
+	comp.AddService("e", eService)
 
 	if err := comp.VerifyDependencies(); err == nil {
 		t.Error("expected error in validation with 'notDefined' service")
@@ -41,17 +43,21 @@ func TestVerifyDependencies(t *testing.T) {
 
 func TestOutputDotGraph(t *testing.T) {
 	comp := makeTestComp()
-	dot, _ := OutputDotGraph(*comp)
+	dot, _ := OutputDotGraph(*comp, true)
 
 	const expected = "a->c"
 	if !strings.Contains(dot, expected) {
 		t.Errorf("expected dot to contain %q got %q", expected, dot)
 	}
-	_, _ = OutputDotGraph(*comp)
+	if !strings.Contains(dot, "d->c") {
+		t.Errorf("d->c dependency missing in dot format: %s", dot)
+	}
+
+	_, _ = OutputDotGraph(*comp, true)
 }
 
 func TestAddDependency(t *testing.T) {
-	service := NewService("dep1")
+	service := NewService(true, "dep1")
 
 	if _, exists := service.DependsOn["dep1"]; !exists {
 		t.Errorf("expected to have 'dep1' in Service.DependsOn got '%v'", service.DependsOn["dep1"])
@@ -68,12 +74,11 @@ func TestDeps(t *testing.T) {
 }
 
 func TestRecursiveDepsOf(t *testing.T) {
-
 	comp := makeTestComp()
 	exp := []string{"c", "a"}
 
 	got, _ := comp.RecursiveDepsOf("a")
-	order, _ := got.DeploymentOrder()
+	order, _ := got.DeploymentOrder(false)
 
 	if !Equal(order, exp) {
 		t.Errorf("expected deps of A equal %v, got %v", exp, order)
@@ -104,7 +109,7 @@ func TestRecursiveDepsOfWithListOfServicesAndBlank(t *testing.T) {
 func TestDeployOrder(t *testing.T) {
 	comp := makeTestComp()
 	exp := []string{"c", "a", "b"}
-	got, _ := comp.DeploymentOrder()
+	got, _ := comp.DeploymentOrder(false)
 
 	if !Equal(exp, got) {
 		t.Errorf("expected deployment order of '%v', got '%v'", exp, got)
@@ -143,4 +148,70 @@ func TestIsIn(t *testing.T) {
 	if slices.Contains(testslice, "three") {
 		t.Error("three is not in testslice")
 	}
+}
+
+func TestDeployOrderWithUndeployables(t *testing.T) {
+	/*
+		Dependency structure:
+		'(#)' means undeployable
+
+		m (#) -> m1
+		m1 (#) -> a, b
+		a
+		b -> c
+		c (#) -> d
+		d
+
+		Expected full deploy orders:
+		  - without undeployable:
+		    d
+		    a (does not depend on anything, can be on any position in order)
+		    c
+		    b
+
+		  - with undeployable:
+		    a (can be at any position, does not have deps)
+		    d (can be at any position, does not have deps)
+		    c
+		    b
+		    m1
+		    m
+	*/
+	comp := NewComposition()
+	m := NewService(false, "m1")
+	comp.AddService("m", m)
+	m1 := NewService(false, "a", "b")
+	comp.AddService("m1", m1)
+	a := NewService(true)
+	comp.AddService("a", a)
+	b := NewService(true, "c")
+	comp.AddService("b", b)
+	c := NewService(false, "d")
+	comp.AddService("c", c)
+	d := NewService(true)
+	comp.AddService("d", d)
+
+	expectedDeployOrderWithoutUndeployable := []string{"d", "a", "c", "b"}
+	expectedDeployOrderWithUndeployable := []string{"d", "c", "b", "a", "m1", "m"}
+
+	orderWithoutUndeployable, err := comp.DeploymentOrder(false)
+	fatalOnErr(t, err)
+	cmpSlice(t, expectedDeployOrderWithoutUndeployable, orderWithoutUndeployable)
+
+	orderWithUndeployable, err := comp.DeploymentOrder(true)
+	fatalOnErr(t, err)
+	cmpSlice(t, expectedDeployOrderWithUndeployable, orderWithUndeployable)
+
+	comp, err = comp.RecursiveDepsOf("c")
+	fatalOnErr(t, err)
+	order, err := comp.DeploymentOrder(true)
+	fatalOnErr(t, err)
+	cmpSlice(t, []string{"d", "c"}, order)
+
+	comp, err = comp.RecursiveDepsOf("c")
+	fatalOnErr(t, err)
+	order, err = comp.DeploymentOrder(false)
+	fatalOnErr(t, err)
+	cmpSlice(t, []string{"d"}, order)
+
 }

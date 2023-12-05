@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -14,7 +15,8 @@ import (
 )
 
 type Service struct {
-	DependsOn map[string]struct{} `json:"depends_on"`
+	DependsOn  map[string]struct{} `json:"depends_on"`
+	Deployable bool                `json:"deployable"`
 }
 
 // AddDependency declares name to be a dependency of s.
@@ -25,12 +27,12 @@ func (s *Service) AddDependency(name string) {
 }
 
 // NewService creates a Service
-func NewService(deps ...string) Service {
+func NewService(deployable bool, deps ...string) Service {
 	m := map[string]struct{}{}
 	for _, dep := range deps {
 		m[dep] = struct{}{}
 	}
-	return Service{DependsOn: m}
+	return Service{Deployable: deployable, DependsOn: m}
 }
 
 type Composition struct {
@@ -56,11 +58,22 @@ func CompositionFromSisuDir(directory, env, region string) (*Composition, error)
 			return nil, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
 		}
 
-		service := NewService(t.TalksTo...)
+		isDeployable := dirExists(filepath.Join(filepath.Dir(tomlfile), "deploy"))
+
+		service := NewService(isDeployable, t.TalksTo...)
 		comp.AddService(t.Name, service)
 	}
 
 	return comp, nil
+}
+
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return info.IsDir()
 }
 
 func CompositionFromJSON(filePath string) (*Composition, error) {
@@ -109,17 +122,20 @@ func (comp *Composition) AddService(name string, service Service) {
 }
 
 // DeploymentOrder ... deploy from order[0] to order[len(order) -1] :)
-func (comp Composition) DeploymentOrder() (order []string, err error) {
+func (comp Composition) DeploymentOrder(includeUndeployable bool) (order []string, err error) {
 	var reverse []string
 	var nodeps []string
 
 	for serviceName := range comp.Services {
-		if len(comp.Services[serviceName].DependsOn) == 0 {
-			nodeps = append(nodeps, serviceName)
+		service := comp.Services[serviceName]
+		if len(service.DependsOn) == 0 {
+			if includeUndeployable || service.Deployable {
+				nodeps = append(nodeps, serviceName)
+			}
 		}
 	}
 
-	graph, err := sortableGraph(comp)
+	graph, err := sortableGraph(comp, includeUndeployable)
 	if err != nil {
 		return order, err
 	}
@@ -172,17 +188,14 @@ func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err err
 		todo[strings.TrimSpace(n)] = true
 	}
 
-	finished := false
-
 	newcomp = NewComposition()
 
-	for !finished {
-
+	for len(todo) > 0 {
 		for serviceName := range todo {
-			_, ok := comp.Services[serviceName]
+			service, ok := comp.Services[serviceName]
 
 			if !ok {
-				comp.AddService(serviceName, NewService())
+				comp.AddService(serviceName, NewService(service.Deployable))
 			}
 
 			newcomp.Services[serviceName] = comp.Services[serviceName]
@@ -198,12 +211,13 @@ func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err err
 			}
 		}
 
-		if len(todo) == 0 {
-			finished = true
-		}
 	}
 
 	return newcomp, nil
+}
+
+func (comp *Composition) isDeployable(serviceName string) bool {
+	return comp.Services[serviceName].Deployable
 }
 
 func (comp *Composition) ToJSONFile(path string) error {
@@ -221,23 +235,27 @@ func (comp *Composition) ToJSONFile(path string) error {
 	return f.Close()
 }
 
-func sortableGraph(comp Composition) (graph *graphs.Graph, err error) {
+func sortableGraph(comp Composition, includeUndeployable bool) (graph *graphs.Graph, err error) {
 	graph = graphs.NewDigraph()
 
-	for service, dependencies := range comp.Services {
-		s := service
-		graph.AddVertex(s)
+	for serviceName, service := range comp.Services {
+		if !includeUndeployable && !service.Deployable {
+			continue
+		}
 
-		for depservice := range dependencies.DependsOn {
-			d := depservice
-			graph.AddEdge(s, d)
+		graph.AddVertex(serviceName)
+
+		for depservice := range service.DependsOn {
+			if includeUndeployable || comp.isDeployable(serviceName) {
+				graph.AddEdge(serviceName, depservice)
+			}
 		}
 	}
 
 	return graph, nil
 }
 
-func OutputDotGraph(comp Composition) (s string, err error) {
+func OutputDotGraph(comp Composition, includeUndeployable bool) (s string, err error) {
 	graph := gographviz.NewGraph()
 	graph.Name = "G"
 	graph.Directed = true
@@ -249,24 +267,31 @@ func OutputDotGraph(comp Composition) (s string, err error) {
 		return s, fmt.Errorf("could not add Attribute ranksep: %w", err)
 	}
 
-	for service, dependencies := range comp.Services {
-		s := service
+	for serviceName, service := range comp.Services {
+		s := serviceName
 
-		if err := graph.AddNode("G", s, nil); err != nil {
-			return s, fmt.Errorf("could not add service %v to graph: %w", service, err)
+		if !includeUndeployable && !service.Deployable {
+			continue
 		}
 
-		for depservice := range dependencies.DependsOn {
+		if err := graph.AddNode("G", s, nil); err != nil {
+			return s, fmt.Errorf("could not add service %v to graph: %w", serviceName, err)
+		}
+
+		for depservice := range service.DependsOn {
 			d := depservice
+			if !includeUndeployable && !service.Deployable {
+				continue
+			}
 
 			if !graph.IsNode(d) {
 				if err := graph.AddNode("G", d, nil); err != nil {
-					return s, fmt.Errorf("could not add service %v to graph: %w", service, err)
+					return s, fmt.Errorf("could not add service %v to graph: %w", serviceName, err)
 				}
 			}
 
 			if err := graph.AddEdge(s, d, true, nil); err != nil {
-				return s, fmt.Errorf("could not add edge from %v to %v: %w", service, depservice, err)
+				return s, fmt.Errorf("could not add edge from %v to %v: %w", serviceName, depservice, err)
 			}
 		}
 	}

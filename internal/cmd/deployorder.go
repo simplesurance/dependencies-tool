@@ -48,8 +48,9 @@ ROOT-DIR to generate a dependency-tree.
 type deployOrder struct {
 	*cobra.Command
 
-	format string
-	apps   []string
+	format                      string
+	apps                        []string
+	includeAppsWithoutDeployDir bool
 
 	src    string
 	Env    string
@@ -79,6 +80,11 @@ func newDeployOrder() *deployOrder {
 		&cmd.apps, "apps", nil,
 		"comma-separated list of apps to generate the deploy order for,\n"+
 			"if unset, the deploy-order is generated for all found apps.",
+	)
+	cmd.Flags().BoolVar(
+		&cmd.includeAppsWithoutDeployDir,
+		"include-undeployable", false,
+		"include apps that do not have a deploy directory",
 	)
 
 	cmd.PreRunE = func(_ *cobra.Command, args []string) error {
@@ -140,7 +146,7 @@ func (c *deployOrder) run(cc *cobra.Command, _ []string) error {
 
 	switch c.format {
 	case "text":
-		secondsorted, err := depsfrom.DeploymentOrder()
+		secondsorted, err := depsfrom.DeploymentOrder(c.includeAppsWithoutDeployDir)
 		if err != nil {
 			return fmt.Errorf("could not generate graph: %w", err)
 		}
@@ -150,14 +156,14 @@ func (c *deployOrder) run(cc *cobra.Command, _ []string) error {
 		}
 	case "dot":
 		cc.Printf("###########\n# dot of %s\n##########\n", strings.Join(c.apps, ", "))
-		depsgraph, err := deps.OutputDotGraph(depsfrom)
+		depsgraph, err := deps.OutputDotGraph(depsfrom, c.includeAppsWithoutDeployDir)
 		if err != nil {
 			return err
 		}
 
 		cc.Println(depsgraph)
 	case "json":
-		secondsorted, err := depsfrom.DeploymentOrder()
+		secondsorted, err := depsfrom.DeploymentOrder(c.includeAppsWithoutDeployDir)
 		if err != nil {
 			return fmt.Errorf("could not generate graph: %w", err)
 		}
