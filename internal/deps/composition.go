@@ -192,10 +192,9 @@ func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err err
 
 	for len(todo) > 0 {
 		for serviceName := range todo {
-			service, ok := comp.Services[serviceName]
-
+			_, ok := comp.Services[serviceName]
 			if !ok {
-				comp.AddService(serviceName, NewService(service.Deployable))
+				return nil, fmt.Errorf("application %s does not exist", serviceName)
 			}
 
 			newcomp.Services[serviceName] = comp.Services[serviceName]
