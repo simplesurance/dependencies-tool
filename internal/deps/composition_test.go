@@ -85,17 +85,6 @@ func TestRecursiveDepsOf(t *testing.T) {
 	}
 }
 
-func TestRecursiveDepsOfWithListOfServices(t *testing.T) {
-	comp := newTestComp()
-
-	got, _ := comp.RecursiveDepsOf("fourth-service,first-service")
-
-	_, ok := got.Services["fifth-service"]
-	if !ok {
-		t.Error("expected to have 'fifth-service' in composition")
-	}
-}
-
 func TestRecursiveDepsOfWithListOfServicesAndBlank(t *testing.T) {
 	comp := newTestComp()
 	got, _ := comp.RecursiveDepsOf("fifth-service, fourth-service")
@@ -214,4 +203,13 @@ func TestDeployOrderWithUndeployables(t *testing.T) {
 	fatalOnErr(t, err)
 	cmpSlice(t, []string{"d"}, order)
 
+}
+
+func TestRecursiveDepsOfFailsIfUnknownAppIsSpecified(t *testing.T) {
+	comp := NewComposition()
+	_, err := comp.RecursiveDepsOf("xyz")
+	expectedErrStr := "application xyz does not exist"
+	if err == nil || err.Error() != expectedErrStr {
+		t.Fatalf("expected err with msg: %q, got: %v", expectedErrStr, err)
+	}
 }
