@@ -13,6 +13,7 @@ func newRoot() *cobra.Command {
 	const shortDesc = "Visualize Dependencies and generate deployment orders"
 
 	root := &cobra.Command{
+		Use:          "dependencies-tool COMMAND",
 		Short:        shortDesc,
 		SilenceUsage: true,
 		Version:      version,
