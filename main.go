@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/simplesurance/dependencies-tool/internal/cmd"
+	"github.com/simplesurance/dependencies-tool/v2/internal/cmd"
 )
 
 func main() {

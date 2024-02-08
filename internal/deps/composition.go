@@ -11,7 +11,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/awalterschulze/gographviz"
 
-	"github.com/simplesurance/dependencies-tool/graphs"
+	"github.com/simplesurance/dependencies-tool/v2/graphs"
 )
 
 type Service struct {

@@ -1,4 +1,4 @@
-module github.com/simplesurance/dependencies-tool
+module github.com/simplesurance/dependencies-tool/v2
 
 go 1.22
 

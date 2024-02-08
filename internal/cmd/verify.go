@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simplesurance/dependencies-tool/internal/deps"
+	"github.com/simplesurance/dependencies-tool/v2/internal/deps"
 )
 
 const verifyShortHelp = "Verify dependency files"
