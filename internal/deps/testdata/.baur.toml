@@ -1,3 +1,0 @@
-[Discover]
-  # List of directories containing applications, example: ['go/code', 'shop/']
-  application_dirs = ["a-service", "b-service"]

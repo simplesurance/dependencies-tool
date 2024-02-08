@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -8,39 +9,35 @@ import (
 	"github.com/simplesurance/dependencies-tool/v2/internal/deps"
 )
 
-const exportCmdShortHelp = "Generate a dependency tree and export it to a file."
+const exportCmdShortHelp = "Read dependency definitions and export them to a file."
 
 var exportCmdLongHelp = exportCmdShortHelp + "\n\n" +
 	`Positional Arguments:
 ` + descRootDirArg + `
-` + descrEnvRegionArgs + `
 ` + descrDependencyFileNames
 
 type exportCmd struct {
 	*cobra.Command
+	rootCmd *rootCmd
 
 	root     string
-	env      string
-	region   string
 	destFile string
 }
 
-func newExportCmd() *exportCmd {
+func newExportCmd(root *rootCmd) *exportCmd {
 	cmd := exportCmd{
+		rootCmd: root,
 		Command: &cobra.Command{
-			Use:   "export ROOT-DIR ENVIRONMENT REGION DEST-FILE",
+			Use:   "export ROOT-DIR DEST-FILE",
 			Short: exportCmdShortHelp,
 			Long:  exportCmdLongHelp,
-			Args:  cobra.ExactArgs(4),
+			Args:  cobra.ExactArgs(2),
 		},
 	}
 
 	cmd.PreRunE = func(_ *cobra.Command, args []string) error {
 		cmd.root = args[0]
-		cmd.env = args[1]
-		cmd.region = args[2]
-		cmd.destFile = args[3]
-
+		cmd.destFile = args[1]
 		return nil
 	}
 	cmd.RunE = cmd.run
@@ -54,9 +51,13 @@ func (c *exportCmd) run(cc *cobra.Command, _ []string) error {
 		return err
 	}
 
-	cmp, err := deps.CompositionFromSisuDir(c.root, c.env, c.region)
+	cmp, err := deps.CompositionFromDir(c.root, c.rootCmd.cfgName, c.rootCmd.ignoredDirs)
 	if err != nil {
 		return err
+	}
+
+	if cmp.IsEmpty() {
+		return fmt.Errorf("could not find any dependency information in %s", c.root)
 	}
 
 	err = cmp.ToJSONFile(c.destFile)
