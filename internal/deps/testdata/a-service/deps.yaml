@@ -1,0 +1,4 @@
+name: a-service
+dependencies:
+  prd:
+    ? b-service

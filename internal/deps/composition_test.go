@@ -1,215 +1,129 @@
 package deps
 
 import (
-	"slices"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/simplesurance/dependencies-tool/v3/internal/testutils"
 )
 
-func newTestComp() Composition {
-	return Composition{Services: map[string]Service{
-		"first-service":  NewService(true, "third"),
-		"second-service": NewService(true, "first-service", "consul", "third-service", "postgres"),
-		"third-service":  NewService(true, "consul", "postgres"),
-		"fourth-service": NewService(true, "fifth-service"),
-		"fifth-service":  NewService(true),
-	}}
+func TestDeploymentOrderNoDeps(t *testing.T) {
+	comp := NewComposition()
+	comp.Add("prd", "app1", &Dependencies{})
+	comp.Add("prd", "app2", &Dependencies{})
+	order, err := comp.DependencyOrder("prd")
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"app1", "app2"}, order)
 }
 
-func makeTestComp() (comp *Composition) {
-	aService := NewService(true, "c")
-	bService := NewService(true, "a")
-	cService := NewService(true)
-	dService := NewService(false, "c")
+func TestDeploymentOrder(t *testing.T) {
+	/*
+		Dependency structure:
+		* means soft-dependency
+		m -> m1
+		m1 -> a, b
+		a
+		b -> c*
+		c -> d
+		d
 
-	comp = NewComposition()
-	comp.AddService("b", bService)
-	comp.AddService("c", cService)
-	comp.AddService("a", aService)
-	comp.AddService("d", dService)
+		Expecting:
+		m1 before m
+		a,b before m1
+		d before c
 
-	return comp
+		c and m can be somewhere in the last, only the other conditions
+		must be met.
+	*/
+	comp := NewComposition()
+	comp.Add("prd", "m", &Dependencies{HardDeps: []string{"m1"}})
+	comp.Add("prd", "m1", &Dependencies{HardDeps: []string{"a", "b"}})
+	comp.Add("prd", "a", &Dependencies{})
+	comp.Add("prd", "b", &Dependencies{SoftDeps: []string{"c"}})
+	comp.Add("prd", "c", &Dependencies{HardDeps: []string{"d"}})
+	comp.Add("prd", "d", &Dependencies{})
+
+	t.Run("all", func(t *testing.T) {
+		order, err := comp.DependencyOrder("prd")
+		require.NoError(t, err)
+		t.Log(order)
+
+		testutils.After(t, order, "m", "m1")
+		testutils.After(t, order, "m1", "a")
+		testutils.After(t, order, "m1", "b")
+		testutils.After(t, order, "c", "d")
+		require.Len(t, order, 6)
+	})
+
+	t.Run("selected_apps", func(t *testing.T) {
+		order, err := comp.DependencyOrder("prd", "m1", "b")
+		require.NoError(t, err)
+		t.Log(order)
+		testutils.After(t, order, "m1", "a")
+		testutils.After(t, order, "m1", "b")
+		testutils.After(t, order, "c", "d")
+		require.Len(t, order, 5)
+
+	})
 }
 
-func TestVerifyDependencies(t *testing.T) {
-	comp := makeTestComp()
-	eService := NewService(true, "notDefined")
-	comp.AddService("e", eService)
+func TestHardDepLoopNotAllowed(t *testing.T) {
+	comp := NewComposition()
+	comp.Add("prd", "m", &Dependencies{HardDeps: []string{"m1"}})
+	comp.Add("prd", "m1", &Dependencies{HardDeps: []string{"m"}})
+	_, err := comp.DependencyOrder("prd")
+	t.Log(err)
+	require.Error(t, err)
+}
 
-	if err := comp.VerifyDependencies(); err == nil {
-		t.Error("expected error in validation with 'notDefined' service")
-	}
+func TestSofDepLoopAllowed(t *testing.T) {
+	comp := NewComposition()
+	comp.Add("prd", "m", &Dependencies{SoftDeps: []string{"m1"}})
+	comp.Add("prd", "m1", &Dependencies{SoftDeps: []string{"m"}})
+	order, err := comp.DependencyOrder("prd")
+	require.NoError(t, err)
+	assert.Contains(t, order, "m")
+	assert.Contains(t, order, "m1")
+	assert.Len(t, order, 2)
+}
+
+func TestVerifyFailsIfSoftDependencyDoesNotExist(t *testing.T) {
+	comp := NewComposition()
+	comp.Add("prd", "m", &Dependencies{SoftDeps: []string{"m1"}})
+	err := comp.Verify()
+	require.Error(t, err)
+}
+
+func TestVerifyFailsIfHardDependencyDoesNotExist(t *testing.T) {
+	comp := NewComposition()
+	comp.Add("prd", "m", &Dependencies{HardDeps: []string{"m1"}})
+	err := comp.Verify()
+	require.Error(t, err)
 }
 
 func TestOutputDotGraph(t *testing.T) {
-	comp := makeTestComp()
-	dot, _ := OutputDotGraph(*comp, true)
+	comp := NewComposition()
+	comp.Add("prd", "a", &Dependencies{HardDeps: []string{"b"}})
+	comp.Add("prd", "b", &Dependencies{HardDeps: []string{"c"}})
+	comp.Add("prd", "c", nil)
 
-	const expected = "a->c"
-	if !strings.Contains(dot, expected) {
-		t.Errorf("expected dot to contain %q got %q", expected, dot)
-	}
-	if !strings.Contains(dot, "d->c") {
-		t.Errorf("d->c dependency missing in dot format: %s", dot)
-	}
+	t.Run("all", func(t *testing.T) {
+		dot, err := comp.DependencyOrderDot("prd")
+		require.NoError(t, err)
 
-	_, _ = OutputDotGraph(*comp, true)
-}
-
-func TestAddDependency(t *testing.T) {
-	service := NewService(true, "dep1")
-
-	if _, exists := service.DependsOn["dep1"]; !exists {
-		t.Errorf("expected to have 'dep1' in Service.DependsOn got '%v'", service.DependsOn["dep1"])
-	}
-}
-
-func TestDeps(t *testing.T) {
-	comp := makeTestComp()
-
-	got := comp.Deps("a")
-	if !Equal(got, []string{"c"}) {
-		t.Errorf("expected dep of service a to be %v, got %v", "[\"c\"]", got)
-	}
-}
-
-func TestRecursiveDepsOf(t *testing.T) {
-	comp := makeTestComp()
-	exp := []string{"c", "a"}
-
-	got, _ := comp.RecursiveDepsOf("a")
-	order, _ := got.DeploymentOrder(false)
-
-	if !Equal(order, exp) {
-		t.Errorf("expected deps of A equal %v, got %v", exp, order)
-	}
-}
-
-func TestRecursiveDepsOfWithListOfServicesAndBlank(t *testing.T) {
-	comp := newTestComp()
-	got, _ := comp.RecursiveDepsOf("fifth-service, fourth-service")
-
-	_, ok := got.Services["fourth-service"]
-	if !ok {
-		t.Error("expected to have 'fourth-service' in composition")
-	}
-}
-
-func TestDeployOrder(t *testing.T) {
-	comp := makeTestComp()
-	exp := []string{"c", "a", "b"}
-	got, _ := comp.DeploymentOrder(false)
-
-	if !Equal(exp, got) {
-		t.Errorf("expected deployment order of '%v', got '%v'", exp, got)
-	}
-}
-
-func TestSanitize(t *testing.T) {
-	s := "mystring"
-	got := s
-	exp := "mystring"
-
-	if got != exp {
-		t.Errorf("expected to be result %v , got %v", exp, got)
-	}
-}
-
-func Equal(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
+		for _, expected := range []string{"a->b", "b->c"} {
+			assert.Contains(t, dot, expected)
 		}
-	}
-	return true
-}
+	})
 
-func TestIsIn(t *testing.T) {
-	testslice := []string{"one", "two"}
+	t.Run("selected_apps", func(t *testing.T) {
+		dot, err := comp.DependencyOrderDot("prd", "b")
+		require.NoError(t, err)
 
-	if !slices.Contains(testslice, "one") {
-		t.Error("expected to be 'one' in testslice")
-	}
+		assert.Contains(t, dot, "b->c")
+		assert.NotContains(t, dot, "a->b")
+	})
 
-	if slices.Contains(testslice, "three") {
-		t.Error("three is not in testslice")
-	}
-}
-
-func TestDeployOrderWithUndeployables(t *testing.T) {
-	/*
-		Dependency structure:
-		'(#)' means undeployable
-
-		m (#) -> m1
-		m1 (#) -> a, b
-		a
-		b -> c
-		c (#) -> d
-		d
-
-		Expected full deploy orders:
-		  - without undeployable:
-		    d
-		    a (does not depend on anything, can be on any position in order)
-		    c
-		    b
-
-		  - with undeployable:
-		    a (can be at any position, does not have deps)
-		    d (can be at any position, does not have deps)
-		    c
-		    b
-		    m1
-		    m
-	*/
-	comp := NewComposition()
-	m := NewService(false, "m1")
-	comp.AddService("m", m)
-	m1 := NewService(false, "a", "b")
-	comp.AddService("m1", m1)
-	a := NewService(true)
-	comp.AddService("a", a)
-	b := NewService(true, "c")
-	comp.AddService("b", b)
-	c := NewService(false, "d")
-	comp.AddService("c", c)
-	d := NewService(true)
-	comp.AddService("d", d)
-
-	expectedDeployOrderWithoutUndeployable := []string{"d", "a", "c", "b"}
-	expectedDeployOrderWithUndeployable := []string{"d", "c", "b", "a", "m1", "m"}
-
-	orderWithoutUndeployable, err := comp.DeploymentOrder(false)
-	fatalOnErr(t, err)
-	cmpSlice(t, expectedDeployOrderWithoutUndeployable, orderWithoutUndeployable)
-
-	orderWithUndeployable, err := comp.DeploymentOrder(true)
-	fatalOnErr(t, err)
-	cmpSlice(t, expectedDeployOrderWithUndeployable, orderWithUndeployable)
-
-	comp, err = comp.RecursiveDepsOf("c")
-	fatalOnErr(t, err)
-	order, err := comp.DeploymentOrder(true)
-	fatalOnErr(t, err)
-	cmpSlice(t, []string{"d", "c"}, order)
-
-	comp, err = comp.RecursiveDepsOf("c")
-	fatalOnErr(t, err)
-	order, err = comp.DeploymentOrder(false)
-	fatalOnErr(t, err)
-	cmpSlice(t, []string{"d"}, order)
-
-}
-
-func TestRecursiveDepsOfFailsIfUnknownAppIsSpecified(t *testing.T) {
-	comp := NewComposition()
-	_, err := comp.RecursiveDepsOf("xyz")
-	expectedErrStr := "application xyz does not exist"
-	if err == nil || err.Error() != expectedErrStr {
-		t.Fatalf("expected err with msg: %q, got: %v", expectedErrStr, err)
-	}
 }

@@ -2,230 +2,149 @@ package deps
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
-	"github.com/BurntSushi/toml"
-	"github.com/awalterschulze/gographviz"
-
-	"github.com/simplesurance/dependencies-tool/graphs"
+	"github.com/simplesurance/dependencies-tool/v3/internal/cfg"
+	"github.com/simplesurance/dependencies-tool/v3/internal/datastructs"
+	"github.com/simplesurance/dependencies-tool/v3/internal/fs"
+	"github.com/simplesurance/dependencies-tool/v3/internal/graphs"
 )
 
-type Service struct {
-	DependsOn  map[string]struct{} `json:"depends_on"`
-	Deployable bool                `json:"deployable"`
-}
-
-// AddDependency declares name to be a dependency of s.
-func (s *Service) AddDependency(name string) {
-	if _, ok := s.DependsOn[name]; !ok {
-		s.DependsOn[name] = struct{}{}
-	}
-}
-
-// NewService creates a Service
-func NewService(deployable bool, deps ...string) Service {
-	m := map[string]struct{}{}
-	for _, dep := range deps {
-		m[dep] = struct{}{}
-	}
-	return Service{Deployable: deployable, DependsOn: m}
-}
+// rootVertexName is the start vertex in the graph. The name must be rare to
+// prevent that an app exist with the same name.
+const rootVertexName string = "root-9e4ecaef-60a4-4300-b0a4-ff3bd1dd7a71"
 
 type Composition struct {
-	Services map[string]Service `json:"services"`
+	//Distribution is map of: map[DISTRIBUTION-NAME]:map[APP-NAME]:Dependencies
+	Distribution map[string]map[string]*Dependencies `json:"distribution"`
 }
 
-// NewComposition creates a Composition
+// NewComposition creates an empty Composition.
 func NewComposition() *Composition {
-	svs := make(map[string]Service)
-	return &Composition{Services: svs}
+	return &Composition{Distribution: map[string]map[string]*Dependencies{}}
 }
 
-func CompositionFromSisuDir(directory, env, region string) (*Composition, error) {
-	tomls, err := applicationTomls(directory, env, region)
+// CompositionFromDir returns a new composition, containing all dependency
+// definitions that are found in rootdir or any of it's sub directories.
+// Compositions are load from files that match the relative path cfgPath.
+// Files that are in directories named as an element in ignoredDirs are ignored.
+// CompositionFromDir calls *Composition.Verify() before it returns.
+func CompositionFromDir(rootdir string, cfgPath string, ignoredDirs []string) (*Composition, error) {
+	realRoot, err := filepath.EvalSymlinks(rootdir)
 	if err != nil {
-		return nil, fmt.Errorf("could not get app tomls, %w", err)
+		return nil, err
+	}
+
+	cfgPaths, err := fs.Find(realRoot, cfgPath, ignoredDirs)
+	if err != nil {
+		return nil, fmt.Errorf("discovering %s files failed: %w", cfgPath, err)
+	}
+
+	if len(cfgPaths) == 0 {
+		return nil, fmt.Errorf("could not find any files in %s matching %s", realRoot, cfgPath)
 	}
 
 	comp := NewComposition()
-	for _, tomlfile := range tomls {
-		var t tomlService
-		if _, err := toml.DecodeFile(tomlfile, &t); err != nil {
-			return nil, fmt.Errorf("could not toml decode %v, %w", tomlfile, err)
+	for _, p := range cfgPaths {
+		config, err := cfg.FromFile(p)
+		if err != nil {
+			return nil, fmt.Errorf("loading config file %q failed: %w", p, err)
 		}
 
-		isDeployable := dirExists(filepath.Join(filepath.Dir(tomlfile), "deploy"))
+		if err := config.Validate(); err != nil {
+			return nil, fmt.Errorf("%s: %w", p, err)
+		}
 
-		service := NewService(isDeployable, t.TalksTo...)
-		comp.AddService(t.Name, service)
+		for distr, deps := range config.Dependencies {
+			app, err := dependenciesFromCfg(deps)
+			if err != nil {
+				return nil, fmt.Errorf("%q: %q: %w", p, distr, err)
+			}
+			comp.Add(distr, config.AppName, app)
+		}
+	}
+
+	if err := comp.Verify(); err != nil {
+		return nil, err
 	}
 
 	return comp, nil
 }
 
-func dirExists(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-
-	return info.IsDir()
-}
-
+// CompositionFromJSON loads a composition from the JSON file filePath.
+// Afterwards it calls Composition.Verify.
 func CompositionFromJSON(filePath string) (*Composition, error) {
-	var result Composition
+	var comp Composition
 
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.NewDecoder(fd).Decode(&result)
+	err = json.NewDecoder(fd).Decode(&comp)
 	if err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	if err := comp.Verify(); err != nil {
+		return nil, err
+	}
+
+	return &comp, nil
 }
 
-// VerifyDependencies checks if all given dependencies are valid
-// it takes a comma separated list of service names.
-// These dependencies should be ignored which can be handy when you have external managed ones.
-func (comp *Composition) VerifyDependencies() (err error) {
-	services := make([]string, 0, len(comp.Services))
-	for serviceName := range comp.Services {
-		services = append(services, serviceName)
-	}
+// Verify ensures that every soft- and hard dependency is also defined as app
+// for a distribution.
+func (c *Composition) Verify() error {
+	var errs []error
 
-	for serviceName := range comp.Services {
-		for depService := range comp.Services[serviceName].DependsOn {
-			if !slices.Contains(services, depService) {
-				return fmt.Errorf("The app %q was specified as dependency of %q but the app was not found in the repository",
-					depService, serviceName,
-				)
-			}
-		}
-	}
-
-	return nil
-}
-
-// AddService adds a Service with the given name to the Composition.
-func (comp *Composition) AddService(name string, service Service) {
-	if _, ok := comp.Services[name]; !ok {
-		comp.Services[name] = service
-	}
-}
-
-// DeploymentOrder ... deploy from order[0] to order[len(order) -1] :)
-func (comp Composition) DeploymentOrder(includeUndeployable bool) (order []string, err error) {
-	var reverse []string
-	var nodeps []string
-
-	for serviceName := range comp.Services {
-		service := comp.Services[serviceName]
-		if len(service.DependsOn) == 0 {
-			if includeUndeployable || service.Deployable {
-				nodeps = append(nodeps, serviceName)
-			}
-		}
-	}
-
-	graph, err := sortableGraph(comp, includeUndeployable)
-	if err != nil {
-		return order, err
-	}
-
-	topOrder, _, err := graphs.TopologicalSort(graph)
-	if err != nil {
-		return order, err
-	}
-
-	e := topOrder.Front()
-
-	for e != nil {
-		reverse = append(reverse, e.Value.(string))
-		e = e.Next()
-	}
-
-	slices.Sort(nodeps)
-	// graphs.TopologicalSort() deletes services which are no dependencies
-	// and have no dependencies so we add them again
-	for _, n := range nodeps {
-		if !slices.Contains(reverse, n) {
-			reverse = append(reverse, n)
-		}
-	}
-
-	for i := len(reverse); i >= 1; i-- {
-		order = append(order, reverse[i-1])
-	}
-
-	return order, nil
-}
-
-// Deps returns list of dependent services
-func (comp Composition) Deps(s string) (services []string) {
-	if _, ok := comp.Services[s]; ok {
-		for depservice := range comp.Services[s].DependsOn {
-			services = append(services, depservice)
-		}
-	}
-	return services
-}
-
-// RecursiveDepsOf returns Composition with services and dependencies of given servicename
-// servicename can be a comma separated list of servicenames
-func (comp Composition) RecursiveDepsOf(s string) (newcomp *Composition, err error) {
-	var added []string
-	todo := make(map[string]bool)
-
-	for _, n := range strings.Split(s, ",") {
-		todo[strings.TrimSpace(n)] = true
-	}
-
-	newcomp = NewComposition()
-
-	for len(todo) > 0 {
-		for serviceName := range todo {
-			_, ok := comp.Services[serviceName]
-			if !ok {
-				return nil, fmt.Errorf("application %s does not exist", serviceName)
+	for distr, apps := range c.Distribution {
+		for app, deps := range apps {
+			if app == rootVertexName {
+				return fmt.Errorf("%q is not allowed as application name", rootVertexName)
 			}
 
-			newcomp.Services[serviceName] = comp.Services[serviceName]
-			if !slices.Contains(added, serviceName) {
-				added = append(added, serviceName)
-			}
-			delete(todo, serviceName)
-
-			for name := range comp.Services[serviceName].DependsOn {
-				if !slices.Contains(added, name) {
-					todo[name] = true
+			for _, dep := range deps.SoftDeps {
+				if _, exist := c.Distribution[distr][dep]; !exist {
+					errs = append(errs, fmt.Errorf("%s defines %q as soft dependency for the distribution %q, but %q does not exist or has no %q distribution entry", app, dep, distr, dep, distr))
 				}
 			}
-		}
+			for _, dep := range deps.HardDeps {
+				if _, exist := c.Distribution[distr][dep]; !exist {
+					errs = append(errs, fmt.Errorf("%s defines %q as hard dependency for the distribution %q, but %q does not exist or has no %q distribution entry", app, dep, distr, dep, distr))
+				}
+			}
 
+		}
 	}
 
-	return newcomp, nil
+	return errors.Join(errs...)
 }
 
-func (comp *Composition) isDeployable(serviceName string) bool {
-	return comp.Services[serviceName].Deployable
+func (c *Composition) Add(distribution, appName string, app *Dependencies) {
+	distr := c.Distribution[distribution]
+	if distr == nil {
+		distr = map[string]*Dependencies{}
+		c.Distribution[distribution] = distr
+	}
+
+	if app == nil {
+		app = &Dependencies{}
+	}
+	distr[appName] = app
 }
 
-func (comp *Composition) ToJSONFile(path string) error {
+func (c *Composition) ToJSONFile(path string) error {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
 		return err
 	}
 
-	err = json.NewEncoder(f).Encode(comp)
+	err = json.NewEncoder(f).Encode(c)
 	if err != nil {
 		_ = f.Close()
 		return err
@@ -234,66 +153,191 @@ func (comp *Composition) ToJSONFile(path string) error {
 	return f.Close()
 }
 
-func sortableGraph(comp Composition, includeUndeployable bool) (graph *graphs.Graph, err error) {
-	graph = graphs.NewDigraph()
-
-	for serviceName, service := range comp.Services {
-		if !includeUndeployable && !service.Deployable {
-			continue
-		}
-
-		graph.AddVertex(serviceName)
-
-		for depservice := range service.DependsOn {
-			if includeUndeployable || comp.isDeployable(serviceName) {
-				graph.AddEdge(serviceName, depservice)
-			}
-		}
+// createGraph returns a DAG of the dependencies for the given distribution.
+// If apps is empty, the DAG will contain all apps of the distribution.
+// Otherwise the DAG will only contain those apps and their dependencies.
+// If an element of apps is not found in the distribution an error is returned.
+func (c *Composition) createGraph(distribution string, apps []string) (*graphs.Graph, error) {
+	distrDeps := c.Distribution[distribution]
+	if distrDeps == nil {
+		return nil, errors.New("no apps are defined for the distribution")
 	}
 
-	return graph, nil
+	g := graphs.NewDigraph()
+
+	// add a parent vertex to the graph, all apps and soft-deps will be
+	// connected to it
+	g.AddVertex(rootVertexName)
+
+	err := c.forEach(distribution, apps,
+		func(appName string, deps *Dependencies) error {
+			g.AddVertex(appName)
+			g.AddEdge(rootVertexName, appName)
+			for _, hd := range deps.HardDeps {
+				g.AddVertex(hd)
+				g.AddEdge(appName, hd)
+			}
+			for _, sd := range deps.SoftDeps {
+				g.AddVertex(sd)
+				g.AddEdge(rootVertexName, sd)
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return g, nil
 }
 
-func OutputDotGraph(comp Composition, includeUndeployable bool) (s string, err error) {
-	graph := gographviz.NewGraph()
-	graph.Name = "G"
-	graph.Directed = true
-
-	if err := graph.AddAttr("G", "splines", "\"ortho\""); err != nil {
-		return s, fmt.Errorf("could not add Attribute splines: %w", err)
+// DependencyOrder calculates the dependency order (reverse topological order)
+// for the given distribution and returns it as string slice.
+// The dependencies of an app, are ordered before the apps that depend on them.
+// If a loop exist between hard dependencies an error is returned.
+// If apps is not empty, the order is only calculated for the given app names
+// instead of all.
+// If an app name is not part of the distribution and error is returned.
+func (c *Composition) DependencyOrder(distribution string, apps ...string) ([]string, error) {
+	g, err := c.createGraph(distribution, apps)
+	if err != nil {
+		return nil, err
 	}
-	if err := graph.AddAttr("G", "ranksep", "\"2.0\""); err != nil {
-		return s, fmt.Errorf("could not add Attribute ranksep: %w", err)
+
+	sorted, _, err := graphs.TopologicalSort(g)
+	if err != nil {
+		return nil, err
 	}
 
-	for serviceName, service := range comp.Services {
-		s := serviceName
+	order := datastructs.ListToSlice(sorted)
 
-		if !includeUndeployable && !service.Deployable {
-			continue
-		}
+	// remove the rootVertexName start vertex from the list:
+	if order[0] != rootVertexName {
+		panic(fmt.Sprintf("BUG: first element in the topological sort list is %s, expecting %s\n", order[0], rootVertexName))
+	}
+	order = order[1:]
 
-		if err := graph.AddNode("G", s, nil); err != nil {
-			return s, fmt.Errorf("could not add service %v to graph: %w", serviceName, err)
-		}
+	// in Topological order the parent vertex come first, we need the
+	// reverse order, dependencies/childs must be ordered before their
+	// parents:
+	slices.Reverse(order)
 
-		for depservice := range service.DependsOn {
-			d := depservice
-			if !includeUndeployable && !service.Deployable {
-				continue
+	return (order), nil
+}
+
+// DependencyOrder calculates the dependency order (reverse topological order)
+// for the given distribution and returns it as graph in the dot format.
+// Soft dependency are marked with dotted edges.
+// If apps is not empty, the order is only calculated for the given app names
+// instead of all.
+// If an app name is not part of the distribution and error is returned.
+// Different from DependencyOrder, not error is returned if a loop exist between
+// hard dependencies, the loop shows up in the dot graph.
+func (c *Composition) DependencyOrderDot(distribution string, apps ...string) (string, error) {
+	graph := graphs.NewDotDiGraph()
+
+	err := c.forEach(distribution, apps,
+		func(appName string, deps *Dependencies) error {
+			if err := graph.AddNode(appName); err != nil {
+				return fmt.Errorf("could not add node %v to graph: %w", appName, err)
 			}
 
-			if !graph.IsNode(d) {
-				if err := graph.AddNode("G", d, nil); err != nil {
-					return s, fmt.Errorf("could not add service %v to graph: %w", serviceName, err)
+			for _, hd := range deps.HardDeps {
+				if err := graph.AddNode(hd); err != nil {
+					return fmt.Errorf("could not add node %v to graph: %w", hd, err)
+				}
+
+				if err := graph.AddEdge(appName, hd); err != nil {
+					return fmt.Errorf("could not add edge for hard dependency from %v to %v: %w", appName, hd, err)
 				}
 			}
 
-			if err := graph.AddEdge(s, d, true, nil); err != nil {
-				return s, fmt.Errorf("could not add edge from %v to %v: %w", serviceName, depservice, err)
+			for _, sd := range deps.SoftDeps {
+				if err := graph.AddNode(sd); err != nil {
+					return fmt.Errorf("could not add node %v to graph: %w", sd, err)
+				}
+
+				if err := graph.AddDottedEdge(appName, sd); err != nil {
+					return fmt.Errorf("could not add edge for soft dependency from %v to %v: %w", appName, sd, err)
+				}
 			}
-		}
+
+			return nil
+		})
+
+	if err != nil {
+		return "", err
 	}
 
 	return graph.String(), nil
+}
+
+func (c *Composition) IsEmpty() bool {
+	return len(c.Distribution) == 0
+}
+
+// forEach iterates over the applications for the given distribution.
+// For each app fn() is called. If fn returns an error, the iteration is
+// aborted and the error is returned by forEach.
+// If apps is empty or nil, it iterates over all apps of the distribution.
+// If apps not empty, it only calls fn for the given app names and their
+// recursive dependencies.
+// If one of the app names is not found in the distribution an error is
+// returned.
+func (c *Composition) forEach(distribution string, apps []string, fn func(appName string, deps *Dependencies) error) error {
+	if len(apps) > 0 {
+		return c.forEachRecursive(distribution, apps, fn)
+	}
+
+	distrDeps := c.Distribution[distribution]
+	if distrDeps == nil {
+		return errors.New("no apps are defined for the distribution")
+	}
+
+	for appName, deps := range distrDeps {
+		if err := fn(appName, deps); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Composition) forEachRecursive(distribution string, apps []string, fn func(appName string, deps *Dependencies) error) error {
+	distrDeps := c.Distribution[distribution]
+	if distrDeps == nil {
+		return errors.New("no apps are defined for the distribution")
+	}
+
+	wanted := datastructs.SliceToSet(apps)
+	seen := make(map[string]struct{}, len(wanted))
+	for len(wanted) > 0 {
+		for appName := range wanted {
+			deps, exist := distrDeps[appName]
+			if !exist {
+				return fmt.Errorf("the app does not exist: %s", appName)
+			}
+			seen[appName] = struct{}{}
+
+			for _, dep := range deps.HardDeps {
+				if _, exists := seen[dep]; exists {
+					continue
+				}
+				wanted[dep] = struct{}{}
+			}
+			for _, dep := range deps.SoftDeps {
+				if _, exists := seen[dep]; exists {
+					continue
+				}
+				wanted[dep] = struct{}{}
+			}
+
+			if err := fn(appName, deps); err != nil {
+				return err
+			}
+			delete(wanted, appName)
+		}
+	}
+
+	return nil
+
 }

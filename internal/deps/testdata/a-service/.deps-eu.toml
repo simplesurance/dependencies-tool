@@ -1,2 +1,0 @@
-name = "a-service"
-talks_to = [ "consul","postgres","eu-service" ]

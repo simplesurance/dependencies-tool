@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -9,28 +10,55 @@ import (
 // version is set via goreleaser
 var version = "UNDEFINED"
 
-func newRoot() *cobra.Command {
+var defaultExcludeDirs = []string{
+	".git",
+	"vendor",
+	"vendor-bin",
+	"cache",
+	".cache",
+	".yarn",
+}
+
+type rootCmd struct {
+	*cobra.Command
+
+	cfgName     string
+	ignoredDirs []string
+}
+
+func newRoot() *rootCmd {
 	const shortDesc = "Visualize Dependencies and generate deployment orders"
 
-	root := &cobra.Command{
-		Use:          "dependencies-tool COMMAND",
-		Short:        shortDesc,
-		SilenceUsage: true,
-		Version:      version,
+	r := rootCmd{
+		Command: &cobra.Command{
+			Use:          "dependencies-tool COMMAND",
+			Short:        shortDesc,
+			SilenceUsage: true,
+			Version:      version,
+		},
 	}
 
-	root.AddCommand(newDeployOrder().Command)
-	root.AddCommand(newVerify().Command)
-	root.AddCommand(newExportCmd().Command)
+	r.PersistentFlags().StringVar(
+		&r.cfgName, "cfg-name",
+		filepath.Join("deploy", "deps.yaml"),
+		"name or path suffix of the files that are discovered and parsed",
+	)
+	r.PersistentFlags().StringSliceVar(
+		&r.ignoredDirs, "exclude",
+		defaultExcludeDirs,
+		"comma-separated list of directory names that are excluded when searching for configuration files",
+	)
+	r.AddCommand(newOrderCmd(&r).Command)
+	r.AddCommand(newVerify(&r).Command)
+	r.AddCommand(newExportCmd(&r).Command)
 
-	return root
+	return &r
 }
 
 func Execute() {
-	root := newRoot()
-	root.SetOut(os.Stdout)
-
-	if err := root.Execute(); err != nil {
+	cmd := newRoot()
+	cmd.SetOut(os.Stdout)
+	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 
