@@ -245,12 +245,20 @@ func (c *Composition) DependencyOrderDot(distribution string, apps ...string) (s
 			}
 
 			for _, hd := range deps.HardDeps {
+				if err := graph.AddNode(hd); err != nil {
+					return fmt.Errorf("could not add node %v to graph: %w", hd, err)
+				}
+
 				if err := graph.AddEdge(appName, hd); err != nil {
 					return fmt.Errorf("could not add edge for hard dependency from %v to %v: %w", appName, hd, err)
 				}
 			}
 
 			for _, sd := range deps.SoftDeps {
+				if err := graph.AddNode(sd); err != nil {
+					return fmt.Errorf("could not add node %v to graph: %w", sd, err)
+				}
+
 				if err := graph.AddDottedEdge(appName, sd); err != nil {
 					return fmt.Errorf("could not add edge for soft dependency from %v to %v: %w", appName, sd, err)
 				}

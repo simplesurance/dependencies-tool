@@ -97,13 +97,12 @@ func (c *orderCmd) run(cc *cobra.Command, _ []string) error {
 		return err
 	}
 
-	order, err := composition.DependencyOrder(c.distr, c.apps...)
-	if err != nil {
-		return err
-	}
-
 	switch c.format {
 	case "text":
+		order, err := composition.DependencyOrder(c.distr, c.apps...)
+		if err != nil {
+			return err
+		}
 		cc.Println(strings.Join(order, "\n"))
 	case "dot":
 		depsgraph, err := composition.DependencyOrderDot(c.distr, c.apps...)
@@ -113,6 +112,10 @@ func (c *orderCmd) run(cc *cobra.Command, _ []string) error {
 
 		cc.Print(depsgraph) // depsgraph already contains a newline at the end
 	case "json":
+		order, err := composition.DependencyOrder(c.distr, c.apps...)
+		if err != nil {
+			return err
+		}
 		enc := json.NewEncoder(cc.OutOrStdout())
 		enc.SetIndent("", "    ")
 		return enc.Encode(order)
