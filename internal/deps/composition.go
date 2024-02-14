@@ -166,8 +166,6 @@ func (c *Composition) createGraph(distribution string, apps []string) (*graphs.G
 		return nil, errors.New("no apps are defined for the distribution")
 	}
 
-	appsSet := datastructs.SliceToSet(apps)
-
 	g := graphs.NewDigraph()
 
 	// add a parent vertex to the graph, all apps and soft-deps will be
@@ -190,11 +188,6 @@ func (c *Composition) createGraph(distribution string, apps []string) (*graphs.G
 		})
 	if err != nil {
 		return nil, err
-	}
-
-	if len(appsSet) > 0 {
-		return nil, fmt.Errorf("the following apps do not exist: %s", strings.Join(maps.Keys(appsSet), ", "))
-
 	}
 
 	return g, nil
@@ -291,9 +284,11 @@ func (c *Composition) forEach(distribution string, apps []string, fn func(appNam
 	}
 
 	appsSet := datastructs.SliceToSet(apps)
+	allApps := len(appsSet) == 0
 	for appName, deps := range distrDeps {
-		if len(appsSet) > 0 && !datastructs.MapHasKey(appsSet, appName) {
+		if datastructs.MapHasKey(appsSet, appName) {
 			delete(appsSet, appName)
+		} else if !allApps {
 			continue
 		}
 		if err := fn(appName, deps); err != nil {

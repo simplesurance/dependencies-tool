@@ -3,6 +3,9 @@ package datastructs
 import "container/list"
 
 func MapHasKey(m map[string]struct{}, k string) bool {
+	if m == nil {
+		return false
+	}
 	_, exists := m[k]
 	return exists
 }
