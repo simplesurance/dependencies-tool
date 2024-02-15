@@ -32,7 +32,6 @@ type Config struct {
 func Unmarshal(r io.Reader) (_ *Config, err error) {
 	var result Config
 	dec := yaml.NewDecoder(r)
-	dec.KnownFields(true)
 
 	defer func() {
 		// sadly Decode panics on some formatting issues in the input,
