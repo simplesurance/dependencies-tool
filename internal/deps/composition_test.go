@@ -45,14 +45,28 @@ func TestDeploymentOrder(t *testing.T) {
 	comp.Add("prd", "c", &Dependencies{HardDeps: []string{"d"}})
 	comp.Add("prd", "d", &Dependencies{})
 
-	order, err := comp.DependencyOrder("prd")
-	require.NoError(t, err)
-	t.Log(order)
+	t.Run("all", func(t *testing.T) {
+		order, err := comp.DependencyOrder("prd")
+		require.NoError(t, err)
+		t.Log(order)
 
-	testutils.After(t, order, "m", "m1")
-	testutils.After(t, order, "m1", "a")
-	testutils.After(t, order, "m1", "b")
-	testutils.After(t, order, "d", "d")
+		testutils.After(t, order, "m", "m1")
+		testutils.After(t, order, "m1", "a")
+		testutils.After(t, order, "m1", "b")
+		testutils.After(t, order, "c", "d")
+		require.Len(t, order, 6)
+	})
+
+	t.Run("selected_apps", func(t *testing.T) {
+		order, err := comp.DependencyOrder("prd", "m1", "b")
+		require.NoError(t, err)
+		t.Log(order)
+		testutils.After(t, order, "m1", "a")
+		testutils.After(t, order, "m1", "b")
+		testutils.After(t, order, "c", "d")
+		require.Len(t, order, 5)
+
+	})
 }
 
 func TestHardDepLoopNotAllowed(t *testing.T) {
@@ -95,11 +109,21 @@ func TestOutputDotGraph(t *testing.T) {
 	comp.Add("prd", "b", &Dependencies{HardDeps: []string{"c"}})
 	comp.Add("prd", "c", nil)
 
-	dot, err := comp.DependencyOrderDot("prd")
-	require.NoError(t, err)
+	t.Run("all", func(t *testing.T) {
+		dot, err := comp.DependencyOrderDot("prd")
+		require.NoError(t, err)
 
-	for _, expected := range []string{"a->b", "b->c"} {
-		assert.Contains(t, dot, expected)
-	}
+		for _, expected := range []string{"a->b", "b->c"} {
+			assert.Contains(t, dot, expected)
+		}
+	})
+
+	t.Run("selected_apps", func(t *testing.T) {
+		dot, err := comp.DependencyOrderDot("prd", "b")
+		require.NoError(t, err)
+
+		assert.Contains(t, dot, "b->c")
+		assert.NotContains(t, dot, "a->b")
+	})
 
 }

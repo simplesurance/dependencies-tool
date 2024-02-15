@@ -7,9 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/simplesurance/dependencies-tool/v2/internal/cfg"
 	"github.com/simplesurance/dependencies-tool/v2/internal/datastructs"
@@ -280,34 +277,67 @@ func (c *Composition) IsEmpty() bool {
 
 // forEach iterates over the applications for the given distribution.
 // For each app fn() is called. If fn returns an error, the iteration is
-// abortedn and the error is returned by forEach.
-// If apps is empty or nil, it iterates over all apps of distribution.
-// If apps not empty, it only calls fn for the given app names.
+// aborted and the error is returned by forEach.
+// If apps is empty or nil, it iterates over all apps of the distribution.
+// If apps not empty, it only calls fn for the given app names and their
+// recursive dependencies.
 // If one of the app names is not found in the distribution an error is
 // returned.
 func (c *Composition) forEach(distribution string, apps []string, fn func(appName string, deps *Dependencies) error) error {
+	if len(apps) > 0 {
+		return c.forEachRecursive(distribution, apps, fn)
+	}
+
 	distrDeps := c.Distribution[distribution]
 	if distrDeps == nil {
 		return errors.New("no apps are defined for the distribution")
 	}
 
-	appsSet := datastructs.SliceToSet(apps)
-	allApps := len(appsSet) == 0
 	for appName, deps := range distrDeps {
-		if datastructs.MapHasKey(appsSet, appName) {
-			delete(appsSet, appName)
-		} else if !allApps {
-			continue
-		}
 		if err := fn(appName, deps); err != nil {
 			return err
 		}
 	}
 
-	if len(appsSet) > 0 {
-		return fmt.Errorf("the following apps do not exist: %s", strings.Join(maps.Keys(appsSet), ", "))
+	return nil
+}
 
+func (c *Composition) forEachRecursive(distribution string, apps []string, fn func(appName string, deps *Dependencies) error) error {
+	distrDeps := c.Distribution[distribution]
+	if distrDeps == nil {
+		return errors.New("no apps are defined for the distribution")
+	}
+
+	wanted := datastructs.SliceToSet(apps)
+	seen := make(map[string]struct{}, len(wanted))
+	for len(wanted) > 0 {
+		for appName := range wanted {
+			deps, exist := distrDeps[appName]
+			if !exist {
+				return fmt.Errorf("the app does not exist: %s", appName)
+			}
+			seen[appName] = struct{}{}
+
+			for _, dep := range deps.HardDeps {
+				if _, exists := seen[dep]; exists {
+					continue
+				}
+				wanted[dep] = struct{}{}
+			}
+			for _, dep := range deps.SoftDeps {
+				if _, exists := seen[dep]; exists {
+					continue
+				}
+				wanted[dep] = struct{}{}
+			}
+
+			if err := fn(appName, deps); err != nil {
+				return err
+			}
+			delete(wanted, appName)
+		}
 	}
 
 	return nil
+
 }
