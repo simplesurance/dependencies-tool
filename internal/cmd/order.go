@@ -16,9 +16,8 @@ const orderShortHelp = "Generate a deployment order."
 
 var descrDependencyFileNames = strings.TrimSpace(`
 Dependency yaml configuration files are discovered by searching in all child
-directories of ROOT-DIR.
-Files that match the path suffix specified via --cfg-name are parsed.
-Symlinks in ROOT-DIR are not followed.
+directories of ROOT-DIR. Files that match the path suffix specified via
+--cfg-name are parsed. Symlinks in ROOT-DIR are not followed.
 `)
 
 const descRootDirArg = `  ROOT-DIR	- Parent directory in which dependency configuration files are discovered.`
@@ -28,6 +27,7 @@ var orderLongHelp = orderShortHelp + "\n\n" + strings.TrimSpace(`
 Positional Arguments:
 `+descRootDirArg+`
   DEP-TREE-FILE	- Path to an exported dependency tree.
+
 The command can use as input either a marshalled dependency-tree file (DEP-TREE-FILE)
 or read and parse YAML configuration files that are found in the child directories of
 ROOT-DIR to generate a dependency-tree.

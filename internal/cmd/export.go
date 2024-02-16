@@ -14,6 +14,7 @@ const exportCmdShortHelp = "Read dependency definitions and export them to a fil
 var exportCmdLongHelp = exportCmdShortHelp + "\n\n" +
 	`Positional Arguments:
 ` + descRootDirArg + `
+
 ` + descrDependencyFileNames
 
 type exportCmd struct {
