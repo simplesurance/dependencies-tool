@@ -6,7 +6,6 @@ require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 	gopkg.in/yaml.v3 v3.0.1
 )
 
