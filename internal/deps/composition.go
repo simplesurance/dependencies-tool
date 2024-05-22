@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -144,13 +145,16 @@ func (c *Composition) ToJSONFile(path string) error {
 		return err
 	}
 
-	err = json.NewEncoder(f).Encode(c)
+	err = c.ToJSON(f)
 	if err != nil {
 		_ = f.Close()
 		return err
 	}
 
 	return f.Close()
+}
+func (c *Composition) ToJSON(w io.Writer) error {
+	return json.NewEncoder(w).Encode(c)
 }
 
 // createGraph returns a DAG of the dependencies for the given distribution.
