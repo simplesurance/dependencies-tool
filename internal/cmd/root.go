@@ -1,8 +1,13 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/simplesurance/dependencies-tool/v3/internal/cmd/fs"
+	"github.com/simplesurance/dependencies-tool/v3/internal/deps"
 
 	"github.com/spf13/cobra"
 )
@@ -48,19 +53,39 @@ func newRoot() *rootCmd {
 		defaultExcludeDirs,
 		"comma-separated list of directory names that are excluded when searching for configuration files",
 	)
+
+	r.AddCommand(newContainsCmd(&r).Command)
+	r.AddCommand(newExportCmd(&r).Command)
 	r.AddCommand(newOrderCmd(&r).Command)
 	r.AddCommand(newVerify(&r).Command)
-	r.AddCommand(newExportCmd(&r).Command)
 
 	return &r
+}
+
+func (r *rootCmd) loadComposition(srcType fs.PathType, src string) (*deps.Composition, error) {
+	switch srcType {
+	case fs.PathTypeDir:
+		return deps.CompositionFromDir(src, r.cfgName, r.ignoredDirs)
+
+	case fs.PathTypeFile:
+		return deps.CompositionFromJSON(src)
+
+	default:
+		panic(fmt.Sprintf("SrcType has unexpected value: %d", srcType))
+	}
 }
 
 func Execute() {
 	cmd := newRoot()
 	cmd.SetOut(os.Stdout)
 	if err := cmd.Execute(); err != nil {
-		os.Exit(1)
+		var ee *ErrWithExitCode
+		if errors.As(err, &ee) {
+			os.Exit(ee.exitCode)
+		}
+
+		os.Exit(ExitCodeError)
 	}
 
-	os.Exit(0)
+	os.Exit(ExitCodeSuccess)
 }

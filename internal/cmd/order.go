@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/simplesurance/dependencies-tool/v3/internal/cmd/fs"
-	"github.com/simplesurance/dependencies-tool/v3/internal/deps"
 )
 
 const orderShortHelp = "Generate a deployment order."
@@ -92,7 +91,7 @@ func newOrderCmd(root *rootCmd) *orderCmd {
 }
 
 func (c *orderCmd) run(cc *cobra.Command, _ []string) error {
-	composition, err := c.load()
+	composition, err := c.root.loadComposition(c.srcType, c.src)
 	if err != nil {
 		return err
 	}
@@ -131,18 +130,4 @@ func validateAppsParam(apps []string) error {
 		}
 	}
 	return nil
-}
-
-func (c *orderCmd) load() (*deps.Composition, error) {
-	switch c.srcType {
-	case fs.PathTypeDir:
-		return deps.CompositionFromDir(c.src, c.root.cfgName, c.root.ignoredDirs)
-
-	case fs.PathTypeFile:
-		return deps.CompositionFromJSON(c.src)
-
-	default:
-		panic(fmt.Sprintf("SrcType has unexpected value: %d", c.srcType))
-	}
-
 }
