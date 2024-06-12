@@ -18,6 +18,25 @@ func TestDeploymentOrderNoDeps(t *testing.T) {
 	require.ElementsMatch(t, []string{"app1", "app2"}, order)
 }
 
+func TestCompositionContains(t *testing.T) {
+	comp := NewComposition()
+	comp.Add("prd", "app1", &Dependencies{})
+	comp.Add("stg", "app1", &Dependencies{})
+	comp.Add("prd", "appX", &Dependencies{})
+
+	exists, err := comp.Contains("abc", "app1")
+	require.Error(t, err)
+	assert.False(t, exists)
+
+	exists, err = comp.Contains("prd", "app1")
+	require.NoError(t, err)
+	assert.True(t, exists)
+
+	exists, err = comp.Contains("prd", "app2")
+	require.NoError(t, err)
+	assert.False(t, exists)
+}
+
 func TestDeploymentOrder(t *testing.T) {
 	/*
 		Dependency structure:

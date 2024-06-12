@@ -139,6 +139,18 @@ func (c *Composition) Add(distribution, appName string, app *Dependencies) {
 	distr[appName] = app
 }
 
+// Contains returns true if the distribution contains appName, otherwise false.
+// If the distribution does not exist an error is returned.
+func (c *Composition) Contains(distribution, appName string) (bool, error) {
+	distr, exists := c.Distribution[distribution]
+	if !exists {
+		return false, errors.New("distribution does not exist")
+	}
+
+	_, exists = distr[appName]
+	return exists, nil
+}
+
 func (c *Composition) ToJSONFile(path string) error {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
