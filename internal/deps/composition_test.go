@@ -21,6 +21,8 @@ func TestDeploymentOrderNoDeps(t *testing.T) {
 func TestCompositionContains(t *testing.T) {
 	comp := NewComposition()
 	comp.Add("prd", "app1", &Dependencies{})
+	comp.Add("stg", "app1", &Dependencies{})
+	comp.Add("prd", "appX", &Dependencies{})
 
 	exists, err := comp.Contains("abc", "app1")
 	require.Error(t, err)
