@@ -1,29 +1,36 @@
----
+version: "2"
 linters:
-  disable-all: false
   enable:
     - bodyclose
-    - errcheck
     - errorlint
-    - goimports
     - goprintffuncname
-    - gosimple
-    - govet
-    - ineffassign
     - misspell
     - nolintlint
     - prealloc
     - revive
-    - staticcheck
-    - tenv
-    - typecheck
     - unconvert
-    - unused
     - usestdlibvars
-
-linters-settings:
-  goimports:
-    local-prefixes: github.com/simplesurance/dependencies-tool
-
-issues:
-  exclude-use-default: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/simplesurance/dependencies-tool
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
