@@ -16,8 +16,8 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
           cache: true
@@ -31,8 +31,8 @@ jobs:
     name: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
           cache: true
@@ -43,16 +43,16 @@ jobs:
     strategy:
       matrix:
         go: ["1.25"]
-        lint: ["v2.6"]
+        lint: ["v2.7"]
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
           cache: true
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v5
         with:
           version: ${{ matrix.lint }}
