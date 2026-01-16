@@ -1,6 +1,6 @@
 module github.com/simplesurance/dependencies-tool/v3
 
-go 1.25.5
+go 1.25.6
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
